@@ -1,6 +1,6 @@
  		DEVICE	ZXSPECTRUM48
-; -----------------------------------------------------------------[22.11.2014]
-; ReVerSE-U16 Loader Version 0.2.9 By MVV
+; -----------------------------------------------------------------[24.03.2015]
+; ReVerSE-U16 Loader Version 0.4.0 By MVV
 ; -----------------------------------------------------------------------------
 ; V0.1.0  30.07.2014	первая версия
 ; V0.2.0  03.08.2014	добавлен i2c
@@ -10,14 +10,17 @@
 ; V0.2.7  10.09.2014	просмотр дескрипторов начиная с адреса 48h, проверка были ли прочитаны данные по i2c
 ; V0.2.9  02.11.2014
 ; V0.3.0  22.11.2014	добавлено чтение silicon ID spiflash w25q64fv, замена m25p16
+; V0.4.0  24.03.2014	добавлена загрузка ROM с SD Card
 
 system_port	equ #0001	; bit2 = 0:Loader ON, 1:Loader OFF; bit0 = 0:w25q64fv, 1:enc424j600
 pr_param	equ #7f00
 page3init	equ #7f04
 cursor_pos	equ #7f05
+block_16kB_cnt	equ #7f06
 buffer		equ #8000
-time_pos_y	equ #09
-time_pos_yx	equ #0900
+time_pos_y	equ #0a
+time_pos_yx	equ #0a00
+TOTAL_PAGE	equ 32
 
 	org #0000
 startprog:
@@ -43,9 +46,79 @@ startprog:
 	call print_hex
 	call spi_end
 
+	ld hl,str8
+	call print_str
+
+
+; -----------------------------------------------------------------------------
+; SD Loader
+; -----------------------------------------------------------------------------
+	ld sp,PWA
+	ld bc,SYC
+	ld a,DEFREQ
+	out(c),a		;SET DEFREQ:%00000010-14MHz
+	;PAGE3
+	ld b,PW3/256
+	in a,(c)		;READ PAGE3 //PW3:#13AF
+	ld (page3init),a		;(page3init) <- SAVE orig PAGE3
+	;PAGE2
+	ld b,PW2/256
+	in a,(c)		;READ PAGE2 //PW2:#12AF 
+	ld e,PG0
+	out (c),e		;SET PAGE2=0xF7
+	ld (PGR),a		;(PGR) <- SAVE orig PAGE2
+	;step_1: INIT SD CARD
+	ld a,#00 		;STREAM: SD_INIT, HDD
+	call FAT_DRV
+	jr nz,ERR		;INIT - FAILED
+	;step_2: find DIR entry
+	ld hl,FES1
+	ld a,#01 		;find DIR entry
+	call FAT_DRV
+	jr nz,ERR		;dir not found
+	ld a,#02		;SET CURR DIR - ACTIVE
+	call FAT_DRV
+	;step_3: find File entry
+	ld hl,FES2
+	ld a,#01		;find File entry
+	call FAT_DRV
+	jr nz,ERR		;file not  found
+	;step_4: download data
+	ld a,#00		;#0 - start page 
+
+	; Open 1st Page = ROM
+	ld (block_16kB_cnt),a	;RESTORE block_16kB_cnt 
+	ld c,a			;page Number
+	ld de,#0000		;offset in PAGE: 
+  	ld b,32			;1 block-512Byte/32bloks-16kB
+	ld a,#03		;code 3: LOAD512(TSFAT.ASM) c
+	call FAT_DRV		;return CDE - Address 
+
+LOAD_16kb
+	;Open 2snd Page = ROM 
+	ld a,(block_16kB_cnt)	;загружаем ячейку счетчика страниц в A
+	inc a			;lock_16kB_cnt+1  увеличиваем значение на 1 
+	ld (block_16kB_cnt),a	;сохраняем новое значение
+	ld c,a			;page 
+	ld de,#0000		;offset in Win3: 
+	ld b,32			;1 block-512Byte // 32- 16kB
+	;load data from opened file
+	ld a,#03		;LOAD512(TSFAT.ASM) 
+	call FAT_DRV		;читаем вторые 16kB
+	jr nz,RTC_INIT		;EOF -EXIT
+	;CHECK CNT
+	ld a,(block_16kB_cnt)	;загружаем ячейку счетчика страниц в A
+	sub TOTAL_PAGE		;проверяем это был последний блок или нет
+	jr nz,LOAD_16kb		;если да то выход, если нет то возврат на 
+	jr RTC_INIT
+ERR
+	ld sp,#7ffe
+	ld hl,str_absent
+	call print_str
+
 	ld hl,str5
 	call print_str
-	
+
 ; 0CC000 evo.rom    512K
 ; -----------------------------------------------------------------------------
 ; SPI autoloader
@@ -60,10 +133,6 @@ startprog:
 	call spi_w
 	ld d,#00
 	call spi_w
-
-	ld bc,#13af
-	in a,(c)
-	ld (page3init),a
 
 	xor a
 spi_loader3
@@ -87,6 +156,10 @@ spi_loader2
 	cp 32
 	jr c,spi_loader3
 	call spi_end
+
+;----------------------------------------------
+RTC_INIT
+	ld sp,#7ffe
 
 	ld a,(page3init)
 	ld bc,#13af
@@ -149,9 +222,6 @@ anykey
 	cp #5a			; <ENTER> ?
 	jr nz,anykey
 	ret
-
-; _____________________________________________________________________________
-
 
 ; -----------------------------------------------------------------------------
 ; ENC424J600 MAC read
@@ -518,9 +588,9 @@ i2c_ack
 	rrca			; error?
 	ret
 
-;==============================================================================
-
+; -----------------------------------------------------------------------------	
 ; clear screen
+; -----------------------------------------------------------------------------	
 cls
 	xor a
 	out (#fe),a
@@ -532,7 +602,9 @@ cls1
 	jr z,cls1
 	ret
 
+; -----------------------------------------------------------------------------	
 ; print string i: hl - pointer to string zero-terminated
+; -----------------------------------------------------------------------------	
 print_str
 	ld a,(hl)
 	cp 17
@@ -576,7 +648,9 @@ print_pos_y
 	inc hl
 	jr print_str
 
+; -----------------------------------------------------------------------------	
 ; print character i: a - ansi char
+; -----------------------------------------------------------------------------	
 print_char
 	push hl
 	push de
@@ -649,7 +723,9 @@ pchar1
 	pop hl
 	ret
 
+; -----------------------------------------------------------------------------	
 ; print hexadecimal i: a - 8 bit number
+; -----------------------------------------------------------------------------	
 print_hex
 	ld b,a
 	and $f0
@@ -806,11 +882,7 @@ attr_addr
 	ret
 
 
-
-
-
-
-
+; -----------------------------------------------------------------------------	
 ; RTC Setup
 ; -----------------------------------------------------------------------------
 ; a = позиция		ix = адрес
@@ -958,15 +1030,17 @@ key_enter
 
 str1	
 	db 23,0,0,17,#47,"ReVerSE-U16 DevBoard",17,7,13,13
-	db "FPGA SoftCore - TSConf v0.3.0",13
-	db "(build 20141122) By MVV",13,13
+	db "FPGA SoftCore - TSConf v0.4.0",13
+	db "(build 20150324) By MVV",13,13
 	db "ASP configuration device ID 0x",0	; EPCS1	0x10 (1 Mb), EPCS4 0x12 (4 Mb), EPCS16 0x14 (16 Mb), EPCS64 0x16 (64 Mb)
+str8
+	db "Loading roms/zxevo.rom...",0
 str5
 	db "Copying data from FLASH...",0
 str3
 	db 17,4," Done",17,7,13,0
 str4
-	db 13,"RTC data read...",0
+	db 23,0,9,"RTC data read...",0
 ;	    00000000001111111111222222222233
 ;	    01234567890123456789012345678901
 str0
@@ -978,7 +1052,7 @@ str6
 	db 23,0,22,"<>:Select Item   ENTER:Save&Exit"
 	db "^",127,  ":Change Values   ESC:Abort   ",0
 str_absent
-	db 17,2," Absent",17,7,13,0
+	db 17,2," Error",17,7,13,0
 str7
 	db 13,13,"MAC address ",0
 
@@ -995,8 +1069,16 @@ cursor_pos_data
 
 day
 	db "Sun",0,"Mon",0,"Tue",0,"Wed",0,"Thu",0,"Fri",0,"Sat",0,"Err",0
-;out
-;	db "      1Hz",0," 4.096kHz",0," 8.192kHz",0,"32.768kHz",0,"        0",0,"        1",0
+FES1	
+	db #10 		;flag (#00 - file, #10 - dir)
+	db "ROMS"	;DIR name
+	db #00
+FES2
+	db #00
+	db "ZXEVO.ROM"    ;file name //
+	db #00
+
+	INCLUDE "TSFAT.ASM"
 font	
 	INCBIN "font.bin"
 
@@ -1004,6 +1086,9 @@ font
 	savebin "loader.bin",startprog, 8192
 	
 	
+;out
+	; db "      1Hz",0," 4.096kHz",0," 8.192kHz",0,"32.768kHz",0,"        0",0,"        1",0
+
 	; db "Square-Wave Output:  [32.768kHz]"	; 1Hz, 4.096kHz, 8.192kHz, 32.768kHz, 0, 1
 	; db "      1Hz"," 4.096kHz"," 8.192kHz","32.768kHz", "        0", "        1"
 	; db "NV RAM:"

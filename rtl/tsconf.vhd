@@ -1,5 +1,5 @@
--------------------------------------------------------------------[22.11.2014]
--- u16-TSConf Version 0.3.0
+-------------------------------------------------------------------[22.03.2015]
+-- u16-TSConf Version 0.4.0
 -- DEVBOARD ReVerSE-U16 By MVV
 -------------------------------------------------------------------------------
 -- V0.1.0	27.07.2014	первая версия
@@ -13,11 +13,12 @@
 -- V0.2.8	19.10.2014	инвентирован CLK в модулях video_tmbuf, video_sfile и добавлены регистры на выходе
 -- V0.2.9	02.11.2014	замена t80s, исправления в zint.v, zports.v, delta-sigma (приводит к намагничиванию динамиков)
 -- V0.3.0	22.11.2014	spiflash w25q64fv
+-- V0.4.0	24.03.2015	в загрузчике добавлена загрузка ROM с SD Card 
 
 -- http://tslabs.info/forum/viewtopic.php?f=31&t=401
 -- http://zx-pk.ru/showthread.php?t=23528
 
--- Copyright (c) 2014 MVV, TS-Labs, dsp, waybester, palsw
+-- Copyright (c) 2014-2015 MVV, TS-Labs, dsp, waybester, palsw
 --
 -- All rights reserved
 --
@@ -357,7 +358,6 @@ signal dma_data			: std_logic_vector(15 downto 0);
 signal dma_wraddr		: std_logic_vector(7 downto 0);
 signal int_start_dma		: std_logic;
 -- SPI
-signal sdcs_n_TS		: std_logic;
 signal spi_stb			: std_logic;
 signal spi_start		: std_logic;
 signal dma_spi_req		: std_logic;
@@ -979,7 +979,7 @@ port map (
 	dataout			=> ena_ports,
 	a			=> cpu_a_bus,
 	rst			=> reset,
-	loader   		=> loader, 		-- for load ROM, SPI should be enable 
+	loader   		=> '0',			-- for load ROM, SPI should be enable 
 	opfetch			=> opfetch, 		-- from zsignals
 	rd			=> rd,
 	wr			=> wr,
@@ -1058,7 +1058,7 @@ port map (
 	vg_cs_n			=> open,
 	vg_wrFF			=> open,
 	drive_sel		=> open,		-- disk drive selection
-	sdcs_n			=> sdcs_n_TS,   	-- to SD card
+	sdcs_n			=> SD_CS_N,	   	-- to SD card
 	sd_start		=> cpu_spi_req, 	-- to SPI
 	sd_datain		=> cpu_spi_din,	 	-- to SPI(7 downto 0);
 	sd_dataout		=> spi_dout, 		-- from SPI(7 downto 0); 
@@ -1509,7 +1509,7 @@ begin
 end process;
 
 -- CPU interface
-cpu_addr_ext <= "100" when (loader = '1' and cpu_a_bus(15 downto 14) = "11") else csvrom & "00"; --- ROM csrom (only for BANK0)
+cpu_addr_ext <= "100" when (loader = '1' and cpu_a_bus(15) = '1') else csvrom & "00"; --- ROM csrom (only for BANK0)
 dram_rdata <= sdr_do_bus_16;
 
 cpu_di_bus <=	rom_do_bus when (loader = '1' and cpu_mreq_n = '0' and cpu_rd_n = '0' and cpu_a_bus(15 downto 13) = "000") else
@@ -1565,9 +1565,6 @@ end process;
 mc146818a_wr <= '1' when (port_bff7 = '1' and cpu_wr_n = '0') else '0';
 --mc146818a_rd <= '1' when (port_bff7 = '1' and cpu_rd_n = '0') else '0';
 port_bff7 <= '1' when (cpu_iorq_n = '0' and cpu_a_bus = X"BFF7" and cpu_m1_n = '1' and port_eff7_reg(7) = '1') else '0';
-
--- Z-Controller
-SD_CS_N <= sdcs_n_TS or loader;
 
 -- SPI ENC424J600/W25Q64FV
 spi_wr <= '1' when (cpu_iorq_n = '0' and cpu_wr_n = '0' and cpu_a_bus(7 downto 1) = "0000001") else '0';
