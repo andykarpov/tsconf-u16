@@ -1,6 +1,6 @@
  		DEVICE	ZXSPECTRUM48
 ; -----------------------------------------------------------------[24.03.2015]
-; ReVerSE-U16 Loader Version 0.4.0 By MVV
+; ReVerSE-U16 Loader Version 0.4.1 By MVV
 ; -----------------------------------------------------------------------------
 ; V0.1.0  30.07.2014	первая версия
 ; V0.2.0  03.08.2014	добавлен i2c
@@ -10,7 +10,7 @@
 ; V0.2.7  10.09.2014	просмотр дескрипторов начиная с адреса 48h, проверка были ли прочитаны данные по i2c
 ; V0.2.9  02.11.2014
 ; V0.3.0  22.11.2014	добавлено чтение silicon ID spiflash w25q64fv, замена m25p16
-; V0.4.0  24.03.2014	добавлена загрузка ROM с SD Card
+; V0.4.1  24.03.2014	добавлена загрузка ROM с SD Card
 
 system_port	equ #0001	; bit2 = 0:Loader ON, 1:Loader OFF; bit0 = 0:w25q64fv, 1:enc424j600
 pr_param	equ #7f00
@@ -35,21 +35,6 @@ startprog:
 	ld hl,str1
 	call print_str
 
-; ID read
-	call spi_start
-	ld d,%10101011	; command ID read
-	call spi_w
-	call spi_r
-	call spi_r
-	call spi_r
-	call spi_r
-	call print_hex
-	call spi_end
-
-	ld hl,str8
-	call print_str
-
-
 ; -----------------------------------------------------------------------------
 ; SD Loader
 ; -----------------------------------------------------------------------------
@@ -60,7 +45,7 @@ startprog:
 	;PAGE3
 	ld b,PW3/256
 	in a,(c)		;READ PAGE3 //PW3:#13AF
-	ld (page3init),a		;(page3init) <- SAVE orig PAGE3
+	ld (page3init),a	;(page3init) <- SAVE orig PAGE3
 	;PAGE2
 	ld b,PW2/256
 	in a,(c)		;READ PAGE2 //PW2:#12AF 
@@ -115,6 +100,20 @@ ERR
 	ld sp,#7ffe
 	ld hl,str_absent
 	call print_str
+
+; ID read
+	ld hl,str8
+	call print_str
+
+	call spi_start
+	ld d,%10101011	; command ID read
+	call spi_w
+	call spi_r
+	call spi_r
+	call spi_r
+	call spi_r
+	call print_hex
+	call spi_end
 
 	ld hl,str5
 	call print_str
@@ -1030,11 +1029,12 @@ key_enter
 
 str1	
 	db 23,0,0,17,#47,"ReVerSE-U16 DevBoard",17,7,13,13
-	db "FPGA SoftCore - TSConf v0.4.0",13
+	db "FPGA SoftCore - TSConf v0.4.1",13
 	db "(build 20150324) By MVV",13,13
-	db "ASP configuration device ID 0x",0	; EPCS1	0x10 (1 Mb), EPCS4 0x12 (4 Mb), EPCS16 0x14 (16 Mb), EPCS64 0x16 (64 Mb)
-str8
+
 	db "Loading roms/zxevo.rom...",0
+str8
+	db "ASP configuration device ID 0x",0	; EPCS1	0x10 (1 Mb), EPCS4 0x12 (4 Mb), EPCS16 0x14 (16 Mb), EPCS64 0x16 (64 Mb)
 str5
 	db "Copying data from FLASH...",0
 str3
