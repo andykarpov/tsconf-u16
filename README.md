@@ -1,4 +1,4 @@
-# TS-Conf v0.3
+# TS-Conf
 
 Поддержка проекта: http://forum.tslabs.info/index.php
 
