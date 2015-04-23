@@ -6,7 +6,7 @@
 
 ####Установка TS-Conf:
 
-1. Скачать и записать в корень на microSD (FAT32) файлы WildCommander
+1. Скачать и записать в корень на microSD (FAT32) файлы roms/zxevo.rom и WildCommander
 2. Записать образы TRD, SCL, TAP, файлы поддерживающий WC...
 3. Скачать и установить FTDI - FT_Prog или аналогичную утилиту для программирования VNC2
 4. Скачать и установить Quartus Programmer
