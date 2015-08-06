@@ -1,6 +1,6 @@
--------------------------------------------------------------------[10.04.2015]
--- u16-TSConf Version 0.4.2
--- DEVBOARD ReVerSE-U16 By MVV
+-------------------------------------------------------------------[06.08.2015]
+-- u16-TSConf Version 0.5.0
+-- DEVBOARD ReVerSE-U16 Rev.C (EP4CE22E22C7) By MVV
 -------------------------------------------------------------------------------
 -- V0.1.0	27.07.2014	первая версия
 -- V0.2.0	31.07.2014	добавлен транслятор PS/2, HDMI
@@ -12,9 +12,10 @@
 -- V0.2.7	13.09.2014	дрожание мультиколора на tv80s, заменил на t80s
 -- V0.2.8	19.10.2014	инвентирован CLK в модулях video_tmbuf, video_sfile и добавлены регистры на выходе
 -- V0.2.9	02.11.2014	замена t80s, исправления в zint.v, zports.v, delta-sigma
--- V0.3.0	22.11.2014	spiflash w25q64fv
+-- V0.3.0	22.11.2014	spiflash m25p16/w25q64fv
 -- V0.4.0	24.03.2015	в загрузчике добавлена загрузка ROM с SD Card
 -- V0.4.2	10.04.2015	исправление в zint.v
+-- V0.5.0	06.08.2015	добавлен ym2413 (порт #xx7C/#xx7D)
 
 -- https://github.com/mvvproject/ReVerSE-U16/tree/master/u16_tsconf
 -- http://tslabs.info/forum/viewtopic.php?f=31&t=401
@@ -79,7 +80,7 @@ port (
 	SDA			: inout std_logic;
 	-- RTC (DS1338Z-33+)
 --	RTC_SQW			: in std_logic;
-	-- SPI FLASH (W25Q64FV)
+	-- SPI FLASH (M25P16)
 	DATA0			: in std_logic;
 	NCSO			: out std_logic;
 	DCLK			: out std_logic;
@@ -104,8 +105,6 @@ port (
 	ETH_CS_N		: out std_logic;
 	-- USB Host (VNC2-32)
 	USB_RESET_N		: in std_logic;
---	USB_PROG_N		: inout std_logic;
---	USB_DBG			: inout std_logic;
 --	USB_IO1			: in std_logic;
 --	USB_IO3			: in std_logic;
 	USB_TX			: in std_logic;
@@ -114,13 +113,15 @@ port (
 --	USB_SI			: out std_logic;
 --	USB_SO			: in std_logic;
 --	USB_CS_N		: out std_logic;
-	-- uBUS
-	AP			: out std_logic;
-	AN			: out std_logic);
+	-- uBUS+
+--	AP			: out std_logic;
+--	AN			: out std_logic;
 --	BP			: in std_logic;
 --	BN			: in std_logic;
 --	CP			: in std_logic;
---	CN			: in std_logic);
+--	CN			: in std_logic;
+	DP			: out std_logic;
+	DN			: out std_logic);
 end tsconf;
 
 architecture rtl of tsconf is
@@ -173,6 +174,7 @@ signal dram_rnw			: std_logic;
 signal port_xxfe_reg		: std_logic_vector(7 downto 0);
 signal port_xx01_reg		: std_logic_vector(7 downto 0) := "00000000";
 signal ena_1_75mhz		: std_logic;
+signal ena_3m5hz		: std_logic;
 signal ena_cnt			: std_logic_vector(5 downto 0);
 -- System
 signal reset			: std_logic;
@@ -383,6 +385,10 @@ signal hdmi_d1_sig		: std_logic;
 -- I2C
 signal i2c_do_bus		: std_logic_vector(7 downto 0);
 signal i2c_wr			: std_logic;
+-- OPLL
+signal opll_cs_n	: std_logic;
+signal opll_mo		: std_logic_vector(9 downto 0);
+signal opll_ro		: std_logic_vector(9 downto 0);
 
 -------------------------------------------------------------------------------
 -- COMPONENTS TS Lab
@@ -1454,7 +1460,7 @@ port map (
 	CLK   			=> clk_84mhz,
 	RESET 			=> areset,
 	DAC_DATA		=> audio_l,
-	DAC_OUT   		=> AP);
+	DAC_OUT   		=> DN);
 
 -- Delta-Sigma
 U20: entity work.dac
@@ -1462,7 +1468,7 @@ port map (
 	CLK   			=> clk_84mhz,
 	RESET 			=> areset,
 	DAC_DATA		=> audio_r,
-	DAC_OUT   		=> AN);
+	DAC_OUT   		=> DP);
 
 -- HDMI
 inst_dvid: entity work.hdmi
@@ -1493,6 +1499,20 @@ port map (
 	WR			=> i2c_wr,
 	I2C_SCL			=> SCL,
 	I2C_SDA			=> SDA);
+	
+-- YM2413
+SE2: entity work.opll
+port map (
+	XIN			=> clk_28MHz,
+	XOUT			=> open,
+	XENA			=> ena_3m5hz,
+	D			=> cpu_do_bus,
+	A			=> cpu_a_bus(0),
+	CS_n			=> opll_cs_n,
+	WE_n			=> cpu_wr_n,
+	IC_n			=> not reset,
+	MO			=> opll_mo,
+	RO			=> opll_ro);
 
 -------------------------------------------------------------------------------
 -- Global
@@ -1505,6 +1525,7 @@ process (clk_28mhz)
 begin
 	if clk_28mhz' event and clk_28mhz = '0' then
 		ena_cnt <= ena_cnt + 1;
+		ena_3m5hz <= not ena_cnt(2) and ena_cnt(1) and ena_cnt(0);
 		ena_1_75mhz <= not ena_cnt(3) and ena_cnt(2) and ena_cnt(1) and ena_cnt(0);
 		ena_0_4375mhz <= not ena_cnt(5) and ena_cnt(4) and ena_cnt(3) and ena_cnt(2) and ena_cnt(1) and ena_cnt(0);
 	end if;
@@ -1568,7 +1589,7 @@ mc146818a_wr <= '1' when (port_bff7 = '1' and cpu_wr_n = '0') else '0';
 --mc146818a_rd <= '1' when (port_bff7 = '1' and cpu_rd_n = '0') else '0';
 port_bff7 <= '1' when (cpu_iorq_n = '0' and cpu_a_bus = X"BFF7" and cpu_m1_n = '1' and port_eff7_reg(7) = '1') else '0';
 
--- SPI ENC424J600/W25Q64FV
+-- SPI ENC424J600/M25P16
 spi_wr <= '1' when (cpu_iorq_n = '0' and cpu_wr_n = '0' and cpu_a_bus(7 downto 1) = "0000001") else '0';
 NCSO <= spi_cs_n when port_xx01_reg(0) = '0' else '1';
 spi_miso <= DATA0 when port_xx01_reg(0) = '0' else ETH_SO;
@@ -1578,7 +1599,10 @@ ETH_CS_N <= '1' when port_xx01_reg(0) = '0' else spi_cs_n;
 i2c_wr <= '1' when (cpu_a_bus(7 downto 5) = "100" and cpu_a_bus(3 downto 0) = "1100" and cpu_wr_n = '0' and cpu_iorq_n = '0') else '0';	-- Port xx8C/xx9C[xxxxxxxx_100n1100]
 
 -- 12bit Delta-Sigma DAC
-audio_l <= ("0000" & port_xxfe_reg(4) & "0000000") + ("0000" & ssg_cn0_a) + ("0000" & ssg_cn0_b) + ("0000" & ssg_cn1_a) + ("0000" & ssg_cn1_b) + ("0000" & covox_a) + ("0000" & covox_b);
-audio_r <= ("0000" & port_xxfe_reg(4) & "0000000") + ("0000" & ssg_cn0_c) + ("0000" & ssg_cn0_b) + ("0000" & ssg_cn1_c) + ("0000" & ssg_cn1_b) + ("0000" & covox_c) + ("0000" & covox_d);
+audio_l <= ("0000" & port_xxfe_reg(4) & "0000000") + ("0000" & ssg_cn0_a) + ("0000" & ssg_cn0_b) + ("0000" & ssg_cn1_a) + ("0000" & ssg_cn1_b) + ("0000" & covox_a) + ("0000" & covox_b) + ("00" & opll_mo);
+audio_r <= ("0000" & port_xxfe_reg(4) & "0000000") + ("0000" & ssg_cn0_c) + ("0000" & ssg_cn0_b) + ("0000" & ssg_cn1_c) + ("0000" & ssg_cn1_b) + ("0000" & covox_c) + ("0000" & covox_d) + ("00" & opll_ro);
+
+-- OPLL
+opll_cs_n <= '0' when (cpu_iorq_n = '0' and cpu_wr_n = '0' and cpu_a_bus(7 downto 1) = "0111110") else '1';	-- xx7C/xx7D[xxxxxxxx_0111110n]
 
 end rtl;

@@ -1,0 +1,12 @@
+BLOCK		START ADDRESS		END ADDRESS
+
+Page_0		0x00000000		0x000AF6E8
+zxevo.hex		0x000CC000		0x0014BFFF
+
+
+
+Notes:
+
+- Data checksum for this conversion is 0x718E4050
+
+- All the addresses in this file are byte addresses

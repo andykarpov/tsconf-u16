@@ -1,6 +1,6 @@
  		DEVICE	ZXSPECTRUM48
-; -----------------------------------------------------------------[10.04.2015]
-; ReVerSE-U16 Loader Version 0.4.2 By MVV
+; -----------------------------------------------------------------[06.08.2015]
+; ReVerSE-U16 Loader Version 0.5.0 By MVV
 ; -----------------------------------------------------------------------------
 ; V0.1.0  30.07.2014	перва€ верси€
 ; V0.2.0  03.08.2014	добавлен i2c
@@ -11,6 +11,7 @@
 ; V0.2.9  02.11.2014
 ; V0.3.0  22.11.2014	добавлено чтение silicon ID spiflash w25q64fv, замена m25p16
 ; V0.4.1  24.03.2014	добавлена загрузка ROM с SD Card
+; V0.5.0  06.08.2015	добавлена поддержка ym2413
 
 system_port	equ #0001	; bit2 = 0:Loader ON, 1:Loader OFF; bit0 = 0:w25q64fv, 1:enc424j600
 pr_param	equ #7f00
@@ -186,6 +187,9 @@ spi_loader4
 	ld hl,str7
 	call print_str
 	call mac_read
+
+	ld hl,str9
+	call print_str
 
 	ld hl,str0		; any key
 	call print_str
@@ -1029,8 +1033,8 @@ key_enter
 
 str1	
 	db 23,0,0,17,#47,"ReVerSE-U16 DevBoard",17,7,13,13
-	db "FPGA SoftCore - TSConf v0.4.2",13
-	db "(build 20150410) By MVV",13,13
+	db "FPGA SoftCore - TSConf v0.5.0",13
+	db "(build 20150806) By MVV",13,13
 
 	db "Loading roms/zxevo.rom...",0
 str8
@@ -1055,6 +1059,8 @@ str_absent
 	db 17,2," Error",17,7,13,0
 str7
 	db 13,13,"MAC address ",0
+str9
+	db 13,13,"MSX-MUSIC YM2413 OPLL",0
 
 ; Fri,05.09.2014 23:53:29
 ; 0-7 1-31 1-12 0-99 0-23 0-59 0-59
