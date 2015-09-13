@@ -1,4 +1,9 @@
 # TS-Conf
+build 20150912:
+ .ym2413 opll
+ .kempston mouse
+
+
 
 Поддержка проекта: http://forum.tslabs.info/index.php
 

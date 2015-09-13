@@ -335,13 +335,13 @@ module zports(
 // writing ports
 
 //#nnAF
-	localparam VCONF		= 8'h00;
-	localparam VPAGE		= 8'h01;
+	localparam VCONF	= 8'h00;
+	localparam VPAGE	= 8'h01;
 	localparam GXOFFSL	= 8'h02;
 	localparam GXOFFSH	= 8'h03;
 	localparam GYOFFSL	= 8'h04;
 	localparam GYOFFSH	= 8'h05;
-	localparam TSCONF		= 8'h06;
+	localparam TSCONF	= 8'h06;
 	localparam PALSEL 	= 8'h07;
 	localparam XBORDER	= 8'h0F;
 
@@ -355,11 +355,11 @@ module zports(
 	localparam T1YOFFSH	= 8'h47;
 
 	localparam RAMPAGE	= 8'h10;	// this covers #10-#13
-	localparam FMADDR		= 8'h15;
-	localparam TMPAGE		= 8'h16;
+	localparam FMADDR	= 8'h15;
+	localparam TMPAGE	= 8'h16;
 	localparam T0GPAGE	= 8'h17;
 	localparam T1GPAGE	= 8'h18;
-	localparam SGPAGE		= 8'h19;
+	localparam SGPAGE	= 8'h19;
 	localparam DMASADDRL	= 8'h1A;
 	localparam DMASADDRH	= 8'h1B;
 	localparam DMASADDRX	= 8'h1C;
@@ -369,74 +369,74 @@ module zports(
 
 	localparam SYSCONF	= 8'h20;
 	localparam MEMCONF	= 8'h21;
-	localparam HSINT		= 8'h22;
-	localparam VSINTL		= 8'h23;
-	localparam VSINTH		= 8'h24;
+	localparam HSINT	= 8'h22;
+	localparam VSINTL	= 8'h23;
+	localparam VSINTH	= 8'h24;
 	localparam IM2VECT	= 8'h25;
-	localparam INTFRM		= 3'b000;
-	localparam INTLIN		= 3'b001;
-	localparam INTDMA		= 3'b010;
-	localparam DMALEN		= 8'h26;
+	localparam INTFRM	= 3'b000;
+	localparam INTLIN	= 3'b001;
+	localparam INTDMA	= 3'b010;
+	localparam DMALEN	= 8'h26;
 	localparam DMACTRL	= 8'h27;
-	localparam DMANUM		= 8'h28;
+	localparam DMANUM	= 8'h28;
 	localparam FDDVIRT	= 8'h29;
 	localparam INTMASK	= 8'h2A;
 	localparam CACHECONF	= 8'h2B;
 
-	localparam XSTAT		= 8'h00;
+	localparam XSTAT	= 8'h00;
 	localparam DMASTAT	= 8'h27;
 
-	assign dmaport_wr[0] = portxt_wr & (hoa == DMASADDRL);
-	assign dmaport_wr[1] = portxt_wr & (hoa == DMASADDRH);
-	assign dmaport_wr[2] = portxt_wr & (hoa == DMASADDRX);
-	assign dmaport_wr[3] = portxt_wr & (hoa == DMADADDRL);
-	assign dmaport_wr[4] = portxt_wr & (hoa == DMADADDRH);
-	assign dmaport_wr[5] = portxt_wr & (hoa == DMADADDRX);
-	assign dmaport_wr[6] = portxt_wr & (hoa == DMALEN);
-	assign dmaport_wr[7] = portxt_wr & (hoa == DMACTRL);
-	assign dmaport_wr[8] = portxt_wr & (hoa == DMANUM);
+	assign dmaport_wr[0] 	= portxt_wr & (hoa == DMASADDRL);
+	assign dmaport_wr[1]	= portxt_wr & (hoa == DMASADDRH);
+	assign dmaport_wr[2]	= portxt_wr & (hoa == DMASADDRX);
+	assign dmaport_wr[3]	= portxt_wr & (hoa == DMADADDRL);
+	assign dmaport_wr[4] 	= portxt_wr & (hoa == DMADADDRH);
+	assign dmaport_wr[5] 	= portxt_wr & (hoa == DMADADDRX);
+	assign dmaport_wr[6] 	= portxt_wr & (hoa == DMALEN);
+	assign dmaport_wr[7] 	= portxt_wr & (hoa == DMACTRL);
+	assign dmaport_wr[8]	= portxt_wr & (hoa == DMANUM);
 
 	assign zborder_wr   	= portfe_wr;
 	assign border_wr    	= (portxt_wr & (hoa == XBORDER));
-   assign zvpage_wr		=  p7ffd_wr;
-   assign vpage_wr	   = (portxt_wr & (hoa == VPAGE ));
-   assign vconf_wr	   = (portxt_wr & (hoa == VCONF ));
-   assign gx_offsl_wr	= (portxt_wr & (hoa == GXOFFSL));
-   assign gx_offsh_wr	= (portxt_wr & (hoa == GXOFFSH));
-   assign gy_offsl_wr	= (portxt_wr & (hoa == GYOFFSL));
-   assign gy_offsh_wr	= (portxt_wr & (hoa == GYOFFSH));
-   assign t0x_offsl_wr	= (portxt_wr & (hoa == T0XOFFSL));
-   assign t0x_offsh_wr	= (portxt_wr & (hoa == T0XOFFSH));
-   assign t0y_offsl_wr	= (portxt_wr & (hoa == T0YOFFSL));
-   assign t0y_offsh_wr	= (portxt_wr & (hoa == T0YOFFSH));
-   assign t1x_offsl_wr	= (portxt_wr & (hoa == T1XOFFSL));
-   assign t1x_offsh_wr	= (portxt_wr & (hoa == T1XOFFSH));
-   assign t1y_offsl_wr	= (portxt_wr & (hoa == T1YOFFSL));
-   assign t1y_offsh_wr	= (portxt_wr & (hoa == T1YOFFSH));
-   assign tsconf_wr		= (portxt_wr & (hoa == TSCONF));
-   assign palsel_wr		= (portxt_wr & (hoa == PALSEL));
-	assign tmpage_wr		= (portxt_wr & (hoa == TMPAGE));
-	assign t0gpage_wr		= (portxt_wr & (hoa == T0GPAGE));
-	assign t1gpage_wr		= (portxt_wr & (hoa == T1GPAGE));
-	assign sgpage_wr		= (portxt_wr & (hoa == SGPAGE));
-   assign hint_beg_wr  	= (portxt_wr & (hoa == HSINT ));
-   assign vint_begl_wr 	= (portxt_wr & (hoa == VSINTL));
-   assign vint_begh_wr 	= (portxt_wr & (hoa == VSINTH));
+	assign zvpage_wr	= p7ffd_wr;
+	assign vpage_wr	  	= (portxt_wr & (hoa == VPAGE ));
+	assign vconf_wr	   	= (portxt_wr & (hoa == VCONF ));
+	assign gx_offsl_wr	= (portxt_wr & (hoa == GXOFFSL));
+	assign gx_offsh_wr	= (portxt_wr & (hoa == GXOFFSH));
+	assign gy_offsl_wr	= (portxt_wr & (hoa == GYOFFSL));
+	assign gy_offsh_wr	= (portxt_wr & (hoa == GYOFFSH));
+	assign t0x_offsl_wr	= (portxt_wr & (hoa == T0XOFFSL));
+	assign t0x_offsh_wr	= (portxt_wr & (hoa == T0XOFFSH));
+	assign t0y_offsl_wr	= (portxt_wr & (hoa == T0YOFFSL));
+	assign t0y_offsh_wr	= (portxt_wr & (hoa == T0YOFFSH));
+	assign t1x_offsl_wr	= (portxt_wr & (hoa == T1XOFFSL));
+	assign t1x_offsh_wr	= (portxt_wr & (hoa == T1XOFFSH));
+	assign t1y_offsl_wr	= (portxt_wr & (hoa == T1YOFFSL));
+	assign t1y_offsh_wr	= (portxt_wr & (hoa == T1YOFFSH));
+	assign tsconf_wr	= (portxt_wr & (hoa == TSCONF));
+	assign palsel_wr	= (portxt_wr & (hoa == PALSEL));
+	assign tmpage_wr	= (portxt_wr & (hoa == TMPAGE));
+	assign t0gpage_wr	= (portxt_wr & (hoa == T0GPAGE));
+	assign t1gpage_wr	= (portxt_wr & (hoa == T1GPAGE));
+	assign sgpage_wr	= (portxt_wr & (hoa == SGPAGE));
+	assign hint_beg_wr  	= (portxt_wr & (hoa == HSINT ));
+	assign vint_begl_wr 	= (portxt_wr & (hoa == VSINTL));
+	assign vint_begh_wr 	= (portxt_wr & (hoa == VSINTH));
 
 	assign beeper_wr 	= portfe_wr;
-	wire portfe_wr 	= (loa==PORTFE) && iowr_s;
+	wire portfe_wr 		= (loa==PORTFE) && iowr_s;
 	assign covox_wr  	= (loa==COVOX) && iowr_s;
-	wire portxt_wr 	= (loa==PORTXT) && iowr_s;
+	wire portxt_wr 		= (loa==PORTXT) && iowr_s;
 
 	reg [7:0] rampage[0:3];
 	assign xt_page = {rampage[3], rampage[2], rampage[1], rampage[0]};
 
-   wire lock128 	= lock128_3 ? 1'b0 : (lock128_2 ? m1_lock128 : memconf[6]);
+	wire lock128 	= lock128_3 ? 1'b0 : (lock128_2 ? m1_lock128 : memconf[6]);
 	wire lock128_2 = memconf[7:6] == 2'b10;		// mode 2
 	wire lock128_3 = memconf[7:6] == 2'b11;      // mode 3
 
 	reg m1_lock128;
-   always @(posedge clk)
+	always @(posedge clk)
 		if (opfetch)
 			m1_lock128 <= !(din[7] ^ din[6]);
 
@@ -536,8 +536,8 @@ module zports(
 
 // SD card (Z-control?r compatible)
 	wire sdcfg_wr;
-   wire sddat_wr;
-   wire sddat_rd;
+	wire sddat_wr;
+	wire sddat_rd;
                                           // if loader =1 should be ENABLE           
 	assign sdcfg_wr = ((loa==SDCFG) && iowr_s && ((!dos || vdos)) || loader);
 	assign sddat_wr = ((loa==SDDAT) && iowr_s && ((!dos || vdos)) || loader);

@@ -1,21 +1,23 @@
--------------------------------------------------------------------[06.08.2015]
--- u16-TSConf Version 0.5.0
+-------------------------------------------------------------------[12.09.2015]
+-- u16-TSConf rev.20150912
 -- DEVBOARD ReVerSE-U16 Rev.C (EP4CE22E22C7) By MVV
 -------------------------------------------------------------------------------
--- V0.1.0	27.07.2014	первая версия
--- V0.2.0	31.07.2014	добавлен транслятор PS/2, HDMI
--- V0.2.1	03.08.2014	добавлен Delta-Sigma DAC, I2C
--- V0.2.3	11.08.2014	добавлен enc424j600
--- V0.2.4	24.08.2014	добавлена поддержка IDE Video DAC (zports.v, video_out.v)
--- V0.2.5	07.09.2014	добавлен порт #0001=key_scan, изменения в keyboard.vhd
--- V0.2.6	09.09.2014	исправлен вывод палитры в (lut.vhd)
--- V0.2.7	13.09.2014	дрожание мультиколора на tv80s, заменил на t80s
--- V0.2.8	19.10.2014	инвентирован CLK в модулях video_tmbuf, video_sfile и добавлены регистры на выходе
--- V0.2.9	02.11.2014	замена t80s, исправления в zint.v, zports.v, delta-sigma
--- V0.3.0	22.11.2014	spiflash m25p16/w25q64fv
--- V0.4.0	24.03.2015	в загрузчике добавлена загрузка ROM с SD Card
--- V0.4.2	10.04.2015	исправление в zint.v
--- V0.5.0	06.08.2015	добавлен ym2413 (порт #xx7C/#xx7D)
+-- 27.07.2014	первая версия
+-- 31.07.2014	добавлен транслятор PS/2, HDMI
+-- 03.08.2014	добавлен Delta-Sigma DAC, I2C
+-- 11.08.2014	добавлен enc424j600
+-- 24.08.2014	добавлена поддержка IDE Video DAC (zports.v, video_out.v)
+-- 07.09.2014	добавлен порт #0001=key_scan, изменения в keyboard.vhd
+-- 09.09.2014	исправлен вывод палитры в (lut.vhd)
+-- 13.09.2014	дрожание мультиколора на tv80s, заменил на t80s
+-- 19.10.2014	инвентирован CLK в модулях video_tmbuf, video_sfile и добавлены регистры на выходе
+-- 02.11.2014	замена t80s, исправления в zint.v, zports.v, delta-sigma
+-- 22.11.2014	spiflash m25p16/w25q64fv
+-- 24.03.2015	в загрузчике добавлена загрузка ROM с SD Card
+-- 10.04.2015	исправление в zint.v
+-- 06.08.2015	добавлен ym2413 (порт #xx7C/#xx7D)
+-- 10.08.2015	не используется сигнал EN при загрузке данных в порта ym2413
+-- 12.09.2015	TurboSound 2x ym2149
 
 -- https://github.com/mvvproject/ReVerSE-U16/tree/master/u16_tsconf
 -- http://tslabs.info/forum/viewtopic.php?f=31&t=401
@@ -57,14 +59,14 @@
 
 library IEEE; 
 use IEEE.std_logic_1164.all; 
-use IEEE.std_logic_unsigned.all;
-use IEEE.numeric_std.all; 
+use IEEE.std_logic_arith.all;
+use IEEE.std_logic_unsigned.all; 
 
 
 entity tsconf is
 port (
 	-- Clock (50MHz)
-	CLK			: in std_logic;
+	CLK_50MHZ		: in std_logic;
 	-- SDRAM (32MB 16x16bit)
 	SDRAM_DQ		: inout std_logic_vector(15 downto 0);
 	SDRAM_A			: out std_logic_vector(12 downto 0);
@@ -72,12 +74,14 @@ port (
 	SDRAM_CLK		: out std_logic;
 	SDRAM_DQML		: out std_logic;
 	SDRAM_DQMH		: out std_logic;
-	SDRAM_WE_N		: out std_logic;
-	SDRAM_CAS_N		: out std_logic;
-	SDRAM_RAS_N		: out std_logic;
+	SDRAM_NWE		: out std_logic;
+	SDRAM_NCAS		: out std_logic;
+	SDRAM_NRAS		: out std_logic;
+	-- RTC (DS1338Z-33+)
+--	RTC_SQW		: in std_logic;
 	-- I2C 
-	SCL			: inout std_logic;
-	SDA			: inout std_logic;
+	I2C_SCL			: inout std_logic;
+	I2C_SDA			: inout std_logic;
 	-- RTC (DS1338Z-33+)
 --	RTC_SQW			: in std_logic;
 	-- SPI FLASH (M25P16)
@@ -85,34 +89,28 @@ port (
 	NCSO			: out std_logic;
 	DCLK			: out std_logic;
 	ASDO			: out std_logic;
-	-- HDMI
---	HDMI_CEC		: inout std_logic;
---	HDMI_DET_N		: in std_logic;
-	HDMI_D0			: out std_logic;
-	HDMI_D1			: out std_logic;
-	HDMI_D1N		: out std_logic := '0';
-	HDMI_D2			: out std_logic;
-	HDMI_CLK		: out std_logic;
-	-- SD/MMC Memory Card
---	SD_DET_N		: in std_logic;
-	SD_SO			: in std_logic;
-	SD_SI			: out std_logic;
-	SD_CLK			: out std_logic;
-	SD_CS_N			: out std_logic;
 	-- Ethernet (ENC424J600)
 	ETH_SO			: in std_logic;
-	ETH_INT_N		: in std_logic;
-	ETH_CS_N		: out std_logic;
+	ETH_NINT		: in std_logic;
+	ETH_NCS			: out std_logic;
+	-- HDMI
+--	HDMI_CEC		: inout std_logic;
+--	HDMI_NDET		: in std_logic;
+	HDMI_D0			: out std_logic;
+	HDMI_D1			: out std_logic;
+	HDMI_D1N		: out std_logic;
+	HDMI_D2			: out std_logic;
+	HDMI_CLK		: out std_logic;
 	-- USB Host (VNC2-32)
-	USB_RESET_N		: in std_logic;
---	USB_IO1			: in std_logic;
---	USB_IO3			: in std_logic;
+	USB_NRESET		: in std_logic;
 	USB_TX			: in std_logic;
 --	USB_RX			: out std_logic;
+--	USB_IO1			: in std_logic;
+--	USB_IO3			: in std_logic;
 --	USB_CLK			: out std_logic;
---	USB_SI			: out std_logic;
+	USB_NCS			: inout std_logic;
+	USB_SI			: inout std_logic;
 --	USB_SO			: in std_logic;
---	USB_CS_N		: out std_logic;
 	-- uBUS+
 --	AP			: out std_logic;
 --	AN			: out std_logic;
@@ -121,13 +119,21 @@ port (
 --	CP			: in std_logic;
 --	CN			: in std_logic;
 	DP			: out std_logic;
-	DN			: out std_logic);
+	DN			: out std_logic;
+	-- SD/MMC Card
+--	SD_NDET			: in std_logic;
+	SD_SO			: in std_logic;
+	SD_SI			: out std_logic;
+	SD_CLK			: out std_logic;
+	SD_NCS			: out std_logic
+	);
 end tsconf;
 
 architecture rtl of tsconf is
 -- CLOCK
 signal clk_84mhz		: std_logic;
 signal clk_28mhz		: std_logic;
+signal clk_ssg			: std_logic;
 -- CPU0
 signal cpu_a_bus		: std_logic_vector(15 downto 0);
 signal cpu_do_bus		: std_logic_vector(7 downto 0);
@@ -186,7 +192,7 @@ signal dos			: std_logic := '1';
 --signal xtpage_0     	 	: std_logic_vector(7 downto 0);
 -- PS/2 Keyboard
 signal kb_do_bus		: std_logic_vector(4 downto 0);
-signal kb_f_bus			: std_logic_vector(4 downto 0);
+signal kb_fn_bus			: std_logic_vector(4 downto 0);
 signal kb_joy_bus		: std_logic_vector(4 downto 0);
 signal key_scancode  		: std_logic_vector(7 downto 0);
 -- UART
@@ -210,17 +216,18 @@ signal covox_c			: std_logic_vector(7 downto 0);
 signal covox_d			: std_logic_vector(7 downto 0);
 -- TurboSound
 signal ssg_sel			: std_logic;
-signal ssg_cn0_bus		: std_logic_vector(7 downto 0);
-signal ssg_cn0_a		: std_logic_vector(7 downto 0);
-signal ssg_cn0_b		: std_logic_vector(7 downto 0);
-signal ssg_cn0_c		: std_logic_vector(7 downto 0);
-signal ssg_cn1_bus		: std_logic_vector(7 downto 0);
-signal ssg_cn1_a		: std_logic_vector(7 downto 0);
-signal ssg_cn1_b		: std_logic_vector(7 downto 0);
-signal ssg_cn1_c		: std_logic_vector(7 downto 0);
+signal ssg0_do_bus		: std_logic_vector(7 downto 0);
+signal ssg0_a			: std_logic_vector(7 downto 0);
+signal ssg0_b			: std_logic_vector(7 downto 0);
+signal ssg0_c			: std_logic_vector(7 downto 0);
+signal ssg1_do_bus		: std_logic_vector(7 downto 0);
+signal ssg1_a			: std_logic_vector(7 downto 0);
+signal ssg1_b			: std_logic_vector(7 downto 0);
+signal ssg1_c			: std_logic_vector(7 downto 0);
 -- AUDIO
-signal audio_l			: std_logic_vector(11 downto 0);
-signal audio_r			: std_logic_vector(11 downto 0);
+signal sound_left		: std_logic_vector(11 downto 0);
+signal sound_right		: std_logic_vector(11 downto 0);
+signal beeper			: std_logic_vector(7 downto 0);
 -- clock
 signal f0 			: std_logic;
 signal f1 			: std_logic;
@@ -386,9 +393,14 @@ signal hdmi_d1_sig		: std_logic;
 signal i2c_do_bus		: std_logic_vector(7 downto 0);
 signal i2c_wr			: std_logic;
 -- OPLL
-signal opll_cs_n	: std_logic;
-signal opll_mo		: std_logic_vector(9 downto 0);
-signal opll_ro		: std_logic_vector(9 downto 0);
+signal opll_cs_n		: std_logic;
+signal opll_mo			: std_logic_vector(9 downto 0);
+signal opll_ro			: std_logic_vector(9 downto 0);
+-- Mouse
+signal ms_x			: std_logic_vector(7 downto 0);
+signal ms_y			: std_logic_vector(7 downto 0);
+signal ms_z			: std_logic_vector(7 downto 0);
+signal ms_b			: std_logic_vector(7 downto 0);
 
 -------------------------------------------------------------------------------
 -- COMPONENTS TS Lab
@@ -855,7 +867,7 @@ begin
 SE0: entity work.altpll0
 port map (
 	areset			=> areset,
-	inclk0			=> CLK, -- 50Mhz
+	inclk0			=> CLK_50MHZ, -- 50Mhz
 	locked			=> locked,
 	c0			=> clk_84mhz,
 	c1			=> clk_28mhz,
@@ -943,6 +955,27 @@ port map (
 	RestoreINT  		=> (others => '1'),
 	RestorePC_n 		=> '1');
 
+--z80_unit: entity work.T80CPU
+--port map (
+--	I_RESET_N	=> not reset,
+--	I_CLK		=> clk_28mhz,
+--	I_CLKEN		=> ena_3m5hz,
+--	I_WAIT_N	=> '1',
+--	I_INT_N		=> cpu_int_n_TS,
+--	I_NMI_N		=> '1',
+--	I_BUSRQ_N	=> '1',
+--	I_DATA		=> cpu_di_bus,
+--	O_DATA		=> cpu_do_bus,
+--	O_ADDR		=> cpu_a_bus,
+--	O_M1_N		=> cpu_m1_n,
+--	O_MREQ_N	=> cpu_mreq_n,
+--	O_IORQ_N	=> cpu_iorq_n,
+--	O_RD_N		=> cpu_rd_n,
+--	O_WR_N		=> cpu_wr_n,
+--	O_RFSH_N	=> cpu_rfsh_n,
+--	O_HALT_N	=> open,
+--	O_BUSAK_N	=> open);
+	
 TS04: zsignals
 port map (
 	clk			=> clk_28mhz,
@@ -1059,14 +1092,14 @@ port map (
 --	ide_ready		=> '0',
 --	ide_stall		=> open,
 	keys_in			=> kb_do_bus,  		-- keys (port FE)
-	mus_in			=> "00000000",		-- mouse (xxDF)
+	mus_in			=> "11111111",		-- mouse (xxDF)
 	kj_in			=> kb_joy_bus,
 	vg_intrq		=> '0',
 	vg_drq			=> '0',			-- from vg93 module - drq + irq read
 	vg_cs_n			=> open,
 	vg_wrFF			=> open,
 	drive_sel		=> open,		-- disk drive selection
-	sdcs_n			=> SD_CS_N,	   	-- to SD card
+	sdcs_n			=> SD_NCS,	   	-- to SD card
 	sd_start		=> cpu_spi_req, 	-- to SPI
 	sd_datain		=> cpu_spi_din,	 	-- to SPI(7 downto 0);
 	sd_dataout		=> spi_dout, 		-- from SPI(7 downto 0); 
@@ -1076,7 +1109,7 @@ port map (
 	wait_start_comport	=> open,
 	wait_write		=> open,
 	wait_read		=> mc146818a_do_bus,
-	com_data_rx		=> "00000000",		--uart_do_bus,
+	com_data_rx		=> "11111111",		--uart_do_bus,
 	com_status		=> "10010000",		--'1' & uart_tx_empty & uart_tx_fifo_empty & "1000" & uart_rx_avail,
 	--com_status		=> '0' & uart_tx_empty & uart_tx_fifo_empty & "0000" & '1',
 	TST  			=> open,
@@ -1366,9 +1399,9 @@ port map (
 	IDLE			=> open,
 	CK			=> SDRAM_CLK,
 	CKE			=> open,
-	RAS_n			=> SDRAM_RAS_N,
-	CAS_n			=> SDRAM_CAS_N,
-	WE_n			=> SDRAM_WE_N,
+	RAS_n			=> SDRAM_NRAS,
+	CAS_n			=> SDRAM_NCAS,
+	WE_n			=> SDRAM_NWE,
 	BA1			=> SDRAM_BA(1),
 	BA0			=> SDRAM_BA(0),
 	MA			=> SDRAM_A,
@@ -1377,17 +1410,25 @@ port map (
 	DQMH     		=> SDRAM_DQMH,
 	dram_stb 		=> open,
 	TST 			=> open);
-
-SE5: entity work.keyboard
+	
+-- USB HID
+SE5: entity work.deserializer
+generic map (
+	divisor			=> 434)		-- divisor = 50MHz / 115200 Baud = 434
 port map(
-	CLK			=> clk_28mhz,
-	RESET			=> areset,
-	A			=> cpu_a_bus(15 downto 8),
-	KEYB			=> kb_do_bus,
-	KEYF			=> kb_f_bus,
-	KEYJOY			=> kb_joy_bus,
-	SCANCODE		=> key_scancode,
-	RX			=> USB_TX);
+	I_CLK			=> CLK_50MHZ,
+	I_RESET			=> areset,
+	I_RX			=> USB_TX,
+	I_NEWFRAME		=> USB_SI,
+	I_ADDR			=> cpu_a_bus(15 downto 8),
+	O_MOUSE_X		=> ms_x,
+	O_MOUSE_Y		=> ms_y,
+	O_MOUSE_Z		=> ms_z,
+	O_MOUSE_BUTTONS		=> ms_b,
+	O_KEYBOARD_SCAN		=> kb_do_bus,
+	O_KEYBOARD_SCANCODE	=> key_scancode,
+	O_KEYBOARD_FKEYS	=> kb_fn_bus,
+	O_KEYBOARD_JOYKEYS	=> kb_joy_bus);
 
 SE9: entity work.mc146818a
 port map (
@@ -1404,101 +1445,116 @@ port map (
 -- Soundrive
 SE10: entity work.soundrive
 port map (
-	RESET			=> reset,
-	CLK			=> clk_28mhz,
-	CS			=> '1',
-	WR_n			=> cpu_wr_n,
-	A			=> cpu_a_bus(7 downto 0),
-	DI			=> cpu_do_bus,
-	IORQ_n			=> cpu_iorq_n,
-	DOS			=> dos,
-	OUTA			=> covox_a,
-	OUTB			=> covox_b,
-	OUTC			=> covox_c,
-	OUTD			=> covox_d);
-		
+	I_RESET			=> reset,
+	I_CLK			=> clk_28mhz,
+	I_CS			=> '1',
+	I_WR_N			=> cpu_wr_n,
+	I_ADDR			=> cpu_a_bus(7 downto 0),
+	I_DATA			=> cpu_do_bus,
+	I_IORQ_N		=> cpu_iorq_n,
+	I_DOS			=> dos,
+	O_COVOX_A		=> covox_a,
+	O_COVOX_B		=> covox_b,
+	O_COVOX_C		=> covox_c,
+	O_COVOX_D		=> covox_d);
+	
 -- TurboSound
 SE12: entity work.turbosound
 port map (
-	RESET			=> reset,
-	CLK			=> clk_28mhz,
-	ENA			=> ena_1_75mhz,
-	A			=> cpu_a_bus,
-	DI			=> cpu_do_bus,
-	WR_n			=> cpu_wr_n,
-	IORQ_n			=> cpu_iorq_n,
-	M1_n			=> cpu_m1_n,
-	SEL			=> ssg_sel,
-	CN0_DO			=> ssg_cn0_bus,
-	CN0_A			=> ssg_cn0_a,
-	CN0_B			=> ssg_cn0_b,
-	CN0_C			=> ssg_cn0_c,
-	CN1_DO			=> ssg_cn1_bus,
-	CN1_A			=> ssg_cn1_a,
-	CN1_B			=> ssg_cn1_b,
-	CN1_C			=> ssg_cn1_c);
-
+	I_CLK			=> clk_28mhz,
+	I_ENA			=> ena_1_75mhz,
+	I_ADDR			=> cpu_a_bus,
+	I_DATA			=> cpu_do_bus,
+	I_WR_N			=> cpu_wr_n,
+	I_IORQ_N		=> cpu_iorq_n,
+	I_M1_N			=> cpu_m1_n,
+	I_RESET_N		=> not reset,
+	O_SEL			=> ssg_sel,
+	-- ssg0
+	I_SSG0_IOA		=> (others => '1'),
+	O_SSG0_IOA		=> open,
+	I_SSG0_IOB		=> (others => '1'),
+	O_SSG0_IOB		=> open,
+	O_SSG0_DA		=> ssg0_do_bus,
+	O_SSG0_AUDIO		=> open,
+	O_SSG0_AUDIO_A		=> ssg0_a,
+	O_SSG0_AUDIO_B		=> ssg0_b,
+	O_SSG0_AUDIO_C		=> ssg0_c,
+	-- ssg1
+	I_SSG1_IOA		=> (others => '1'),
+	O_SSG1_IOA		=> open,
+	I_SSG1_IOB		=> (others => '1'),
+	O_SSG1_IOB		=> open,
+	O_SSG1_DA		=> ssg1_do_bus,
+	O_SSG1_AUDIO		=> open,
+	O_SSG1_AUDIO_A		=> ssg1_a,
+	O_SSG1_AUDIO_B		=> ssg1_b,
+	O_SSG1_AUDIO_C		=> ssg1_c);
+	
 -- SPI FLASH
 U8: entity work.spi_flash
 port map (
-	RESET			=> reset,
-	CLK			=> clk_28mhz,
-	SCK			=> f0,		-- Max 20MHz
-	A			=> cpu_a_bus(0),
-	DI			=> cpu_do_bus,
-	DO			=> spi_do_bus,
-	WR			=> spi_wr,
-	BUSY			=> spi_busy,
-	CS_n			=> spi_cs_n,
-	SCLK			=> DCLK,
-	MOSI			=> ASDO,
-	MISO			=> spi_miso);
-
+	I_RESET			=> reset,
+	I_CLK			=> clk_28mhz,
+	I_SCK			=> f0,		-- Max 20MHz
+	I_ADDR			=> cpu_a_bus(0),
+	I_DATA			=> cpu_do_bus,
+	O_DATA			=> spi_do_bus,
+	I_WR			=> spi_wr,
+	O_BUSY			=> spi_busy,
+	O_CS_n			=> spi_cs_n,
+	O_SCLK			=> DCLK,
+	O_MOSI			=> ASDO,
+	I_MISO			=> spi_miso);
+	
 -- Delta-Sigma
 U19: entity work.dac
+generic map (
+	msbi_g			=> 11)
 port map (
-	CLK   			=> clk_84mhz,
-	RESET 			=> areset,
-	DAC_DATA		=> audio_l,
-	DAC_OUT   		=> DN);
+	I_CLK  			=> clk_84mhz,
+	I_RESET			=> areset,
+	I_DATA			=> sound_left,
+	O_DAC			=> DP);
 
 -- Delta-Sigma
 U20: entity work.dac
+generic map (
+	msbi_g			=> 11)
 port map (
-	CLK   			=> clk_84mhz,
-	RESET 			=> areset,
-	DAC_DATA		=> audio_r,
-	DAC_OUT   		=> DP);
+	I_CLK  			=> clk_84mhz,
+	I_RESET 		=> areset,
+	I_DATA			=> sound_right,
+	O_DAC   		=> DN);
 
 -- HDMI
 inst_dvid: entity work.hdmi
 port map(
-	CLK_DVI			=> clk_hdmi,
-	CLK_PIXEL		=> clk_28mhz,
-	R			=> vred_ts,
-	G			=> vgrn_ts,
-	B			=> vblu_ts,
-	BLANK			=> csync_ts,
-	HSYNC			=> hsync_ts,
-	VSYNC			=> vsync_ts,
-	AUX			=> "000000000000",
-	TMDS_D0			=> HDMI_D0,
-	TMDS_D1			=> HDMI_D1,
-	TMDS_D2			=> HDMI_D2,
-	TMDS_CLK		=> HDMI_CLK);
+	I_CLK			=> clk_hdmi,
+	I_CLK_PIXEL		=> clk_28mhz,
+	I_R			=> vred_ts,
+	I_G			=> vgrn_ts,
+	I_B			=> vblu_ts,
+	I_BLANK			=> csync_ts,
+	I_HSYNC			=> hsync_ts,
+	I_VSYNC			=> vsync_ts,
+	O_TMDS_D0		=> HDMI_D0,
+	O_TMDS_D1		=> HDMI_D1,
+	O_TMDS_D2		=> HDMI_D2,
+	O_TMDS_CLK		=> HDMI_CLK);
 
 -- I2C Controller
 U12: entity work.i2c
 port map (
-	RESET			=> reset,
-	CLK			=> clk_28mhz,
-	ENA			=> ena_0_4375mhz,
-	A			=> cpu_a_bus(4),
-	DI			=> cpu_do_bus,
-	DO			=> i2c_do_bus,
-	WR			=> i2c_wr,
-	I2C_SCL			=> SCL,
-	I2C_SDA			=> SDA);
+	I_RESET			=> reset,
+	I_CLK			=> clk_28mhz,
+	I_ENA			=> ena_0_4375mhz,
+	I_ADDR			=> cpu_a_bus(4),
+	I_DATA			=> cpu_do_bus,
+	O_DATA			=> i2c_do_bus,
+	I_WR			=> i2c_wr,
+	IO_I2C_SCL		=> I2C_SCL,
+	IO_I2C_SDA		=> I2C_SDA);
 	
 -- YM2413
 SE2: entity work.opll
@@ -1517,19 +1573,20 @@ port map (
 -------------------------------------------------------------------------------
 -- Global
 -------------------------------------------------------------------------------
-areset <= not USB_RESET_N;
-reset <= areset or not locked or (kb_f_bus(0));	-- Reset
+areset <= not USB_NRESET;
+reset <= areset or not locked or (kb_fn_bus(0));	-- Reset
 go_arbiter <= go;
 
 process (clk_28mhz)
 begin
 	if clk_28mhz' event and clk_28mhz = '0' then
 		ena_cnt <= ena_cnt + 1;
-		ena_3m5hz <= not ena_cnt(2) and ena_cnt(1) and ena_cnt(0);
-		ena_1_75mhz <= not ena_cnt(3) and ena_cnt(2) and ena_cnt(1) and ena_cnt(0);
-		ena_0_4375mhz <= not ena_cnt(5) and ena_cnt(4) and ena_cnt(3) and ena_cnt(2) and ena_cnt(1) and ena_cnt(0);
 	end if;
 end process;
+
+ena_3m5hz <= ena_cnt(2) and ena_cnt(1) and ena_cnt(0);
+ena_1_75mhz <= ena_cnt(3) and ena_cnt(2) and ena_cnt(1) and ena_cnt(0);
+ena_0_4375mhz <= ena_cnt(5) and ena_cnt(4) and ena_cnt(3) and ena_cnt(2) and ena_cnt(1) and ena_cnt(0);
 
 -- CPU interface
 cpu_addr_ext <= "100" when (loader = '1' and cpu_a_bus(15) = '1') else csvrom & "00"; --- ROM csrom (only for BANK0)
@@ -1539,12 +1596,15 @@ cpu_di_bus <=	rom_do_bus when (loader = '1' and cpu_mreq_n = '0' and cpu_rd_n = 
 		sdr_do_bus when (cpu_mreq_n = '0' and cpu_rd_n = '0') else 	-- SDRAM
 		im2vect	when intack = '1' else
 		spi_do_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus( 7 downto 0) = X"02") else
-		spi_busy & ETH_INT_N & "111111" when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus( 7 downto 0) = X"03") else
-		mc146818a_do_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and port_bff7 = '1' and port_eff7_reg(7) = '1') else -- MC146818A
-		ssg_cn0_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = "1111111111111101" and ssg_sel = '0') else -- TurboSound
-		ssg_cn1_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = "1111111111111101" and ssg_sel = '1') else
+		spi_busy & ETH_NINT & "111111" when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus( 7 downto 0) = X"03") else
+		mc146818a_do_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and port_bff7 = '1' and port_eff7_reg(7) = '1') else		-- MC146818A
+		ssg0_do_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"FFFD" and ssg_sel = '0') else	-- TurboSound
+		ssg1_do_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"FFFD" and ssg_sel = '1') else
 		key_scancode when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"0001") else
 		i2c_do_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus( 7 downto 5) = "100" and cpu_a_bus(3 downto 0) = "1100") else -- RTC
+		ms_z(3 downto 0) & '1' & not ms_b(2 downto 0) when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"FADF") else
+		ms_x when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"FBDF") else
+		not ms_y when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"FFDF") else
 		dout_ports when ena_ports = '1' else
 		"11111111";
 
@@ -1574,11 +1634,11 @@ end process;
 turbo <= "11" when loader = '1' else sysconf(1 downto 0); 
 
 -- Fx Keys
-process (clk_28mhz, key, kb_f_bus, key_f)
+process (clk_28mhz, key, kb_fn_bus, key_f)
 begin
 	if (clk_28mhz'event and clk_28mhz = '1') then
-		key <= kb_f_bus;
-		if (kb_f_bus /= key) then
+		key <= kb_fn_bus;
+		if (kb_fn_bus /= key) then
 			key_f <= key_f xor key;
 		end if;
 	end if;
@@ -1593,16 +1653,21 @@ port_bff7 <= '1' when (cpu_iorq_n = '0' and cpu_a_bus = X"BFF7" and cpu_m1_n = '
 spi_wr <= '1' when (cpu_iorq_n = '0' and cpu_wr_n = '0' and cpu_a_bus(7 downto 1) = "0000001") else '0';
 NCSO <= spi_cs_n when port_xx01_reg(0) = '0' else '1';
 spi_miso <= DATA0 when port_xx01_reg(0) = '0' else ETH_SO;
-ETH_CS_N <= '1' when port_xx01_reg(0) = '0' else spi_cs_n;
+ETH_NCS <= '1' when port_xx01_reg(0) = '0' else spi_cs_n;
 
 -- I2C
 i2c_wr <= '1' when (cpu_a_bus(7 downto 5) = "100" and cpu_a_bus(3 downto 0) = "1100" and cpu_wr_n = '0' and cpu_iorq_n = '0') else '0';	-- Port xx8C/xx9C[xxxxxxxx_100n1100]
 
--- 12bit Delta-Sigma DAC
-audio_l <= ("0000" & port_xxfe_reg(4) & "0000000") + ("0000" & ssg_cn0_a) + ("0000" & ssg_cn0_b) + ("0000" & ssg_cn1_a) + ("0000" & ssg_cn1_b) + ("0000" & covox_a) + ("0000" & covox_b) + ("00" & opll_mo);
-audio_r <= ("0000" & port_xxfe_reg(4) & "0000000") + ("0000" & ssg_cn0_c) + ("0000" & ssg_cn0_b) + ("0000" & ssg_cn1_c) + ("0000" & ssg_cn1_b) + ("0000" & covox_c) + ("0000" & covox_d) + ("00" & opll_ro);
+-- Audio
+beeper <= (others => port_xxfe_reg(4));
+sound_left  <= ("0000" & beeper) + ("0000" & ssg0_a) + ("0000" & ssg0_b) + ("0000" & ssg1_a) + ("0000" & ssg1_b) + ("0000" & covox_a) + ("0000" & covox_b) + (("00" & opll_mo) - "1000000000");
+sound_right <= ("0000" & beeper) + ("0000" & ssg0_c) + ("0000" & ssg0_b) + ("0000" & ssg1_c) + ("0000" & ssg1_b) + ("0000" & covox_c) + ("0000" & covox_d) + (("00" & opll_ro) - "1000000000");
 
 -- OPLL
-opll_cs_n <= '0' when (cpu_iorq_n = '0' and cpu_wr_n = '0' and cpu_a_bus(7 downto 1) = "0111110") else '1';	-- xx7C/xx7D[xxxxxxxx_0111110n]
+opll_cs_n <= '0' when (cpu_m1_n = '1' and cpu_iorq_n = '0' and cpu_a_bus(7 downto 1) = "0111110") else '1';	-- xx7C/xx7D[xxxxxxxx_0111110n]
+
+HDMI_D1N <= '0';
+USB_NCS  <= '0';
+
 
 end rtl;

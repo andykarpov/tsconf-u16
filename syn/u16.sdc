@@ -17,12 +17,12 @@
 
 ## VENDOR  "Altera"
 ## PROGRAM "Quartus II"
-## VERSION "Version 11.0 Build 208 07/03/2011 Service Pack 1 SJ Full Version"
+## VERSION "Version 11.0 Build 157 04/27/2011 SJ Full Version"
 
-## DATE    "Sat Oct 18 20:56:19 2014"
+## DATE    "Wed Jul 16 09:06:12 2014"
 
 ##
-## DEVICE  "EP4CE22E22C7"
+## DEVICE  "EP3C25E144I7"
 ##
 
 
@@ -30,23 +30,19 @@
 # Time Information
 #**************************************************************
 
-set_time_format -unit ns -decimal_places 3
-
 
 
 #**************************************************************
 # Create Clock
 #**************************************************************
 
-create_clock -name {CLK} -period 20.000 -waveform { 0.000 10.000 } [get_ports {CLK}]
-
-
+create_clock -period 20 [get_ports CLK_50MHZ]
 
 #**************************************************************
 # Create Generated Clock
 #**************************************************************
 
-derive_pll_clocks -create_base_clocks
+derive_pll_clocks
 
 #**************************************************************
 # Set Clock Latency
@@ -58,6 +54,7 @@ derive_pll_clocks -create_base_clocks
 # Set Clock Uncertainty
 #**************************************************************
 
+derive_clock_uncertainty
 
 #**************************************************************
 # Set Input Delay

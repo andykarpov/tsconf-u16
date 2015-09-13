@@ -1,7 +1,9 @@
--------------------------------------------------------------------[15.10.2011]
--- I2C Controller for PCF8583
+-------------------------------------------------------------------[11.09.2015]
+-- I2C Controller
 -------------------------------------------------------------------------------
--- V0.1 	15.10.2011	первая версия
+-- Engineer: 	MVV
+--
+-- 15.10.2011	Initial
 
 -- The I2C core provides for four register addresses 
 -- that the CPU can read or writen to:
@@ -30,56 +32,56 @@ use ieee.std_logic_unsigned.all;
 entity i2c is
 port (
 	-- CPU Interface Signals
-	RESET			: in std_logic;
-	CLK				: in std_logic;
-	ENA				: in std_logic;		-- 400KHz (4T = SCL clock frequency 100 kHz)
-	A				: in std_logic;
-	DI				: in std_logic_vector(7 downto 0);
-	DO				: out std_logic_vector(7 downto 0);
-	WR				: in std_logic;
+	I_RESET		: in std_logic;
+	I_CLK		: in std_logic;
+	I_ENA		: in std_logic;		-- 400KHz (4T = SCL clock frequency 100 kHz)
+	I_ADDR		: in std_logic;
+	I_DATA		: in std_logic_vector(7 downto 0);
+	O_DATA		: out std_logic_vector(7 downto 0);
+	I_WR		: in std_logic;
 	-- I2C Interface Signals
-	I2C_SCL			: inout std_logic;
-	I2C_SDA			: inout std_logic);
+	IO_I2C_SCL	: inout std_logic;
+	IO_I2C_SDA	: inout std_logic);
 end i2c;
 
 architecture rtc_arch of i2c is
 type state_t is (s_idle, s_start, s_data, s_ack, s_stop, s_done);
 signal state 		: state_t;
 signal data_buf		: std_logic_vector(7 downto 0);
-signal go			: std_logic;
-signal mode			: std_logic_vector(1 downto 0);
+signal go		: std_logic;
+signal mode		: std_logic_vector(1 downto 0);
 signal shift_reg	: std_logic_vector(7 downto 0);
-signal ack			: std_logic;
+signal ack		: std_logic;
 signal nbit 		: std_logic_vector(2 downto 0);
 signal phase 		: std_logic_vector(1 downto 0);
-signal scl 			: std_logic;
-signal sda 			: std_logic;
+signal scl 		: std_logic;
+signal sda 		: std_logic;
 signal rw_bit 		: std_logic;
 signal rw_flag		: std_logic;
 
 begin
 
 -- Read CPU bus into internal registers
-cpu_write : process (CLK, RESET, WR)
+cpu_write : process (I_CLK, I_RESET, I_WR)
 begin
-	if CLK'event and CLK = '1' then
-		if WR = '1' then
-			if A = '0' then
-				data_buf <= DI;
+	if I_CLK'event and I_CLK = '1' then
+		if I_WR = '1' then
+			if I_ADDR = '0' then
+				data_buf <= I_DATA;
 			else
-				mode <= DI(1 downto 0);
+				mode <= I_DATA(1 downto 0);
 			end if;
 		end if;
 	end if;
 end process;
 
-process (RESET, CLK, ENA, WR, A, state)
+process (I_RESET, I_CLK, I_ENA, I_WR, I_ADDR, state)
 begin
-	if RESET = '1' or state = s_data then
+	if I_RESET = '1' or state = s_data then
 		go <= '0';
-	elsif CLK'event and CLK = '1' then
-		if WR = '1' then
-			if A = '0' then
+	elsif I_CLK'event and I_CLK = '1' then
+		if I_WR = '1' then
+			if I_ADDR = '0' then
 				go <= '1';
 			end if;
 		end if;
@@ -87,18 +89,18 @@ begin
 end process;
 
 -- Provide data for the CPU to read
-cpu_read : process (A, state, shift_reg, ack, go)
+cpu_read : process (I_ADDR, state, shift_reg, ack, go)
 begin
-	DO(7 downto 2) <= "111111";
-	if A = '0' then
-		DO <= shift_reg;
+	O_DATA(7 downto 2) <= "111111";
+	if I_ADDR = '0' then
+		O_DATA <= shift_reg;
 	else
 		if (state = s_idle and go = '0') then
-			DO(0) <= '0';
+			O_DATA(0) <= '0';
 		else
-			DO(0) <= '1';
+			O_DATA(0) <= '1';
 		end if;
-		DO(1) <= ack;
+		O_DATA(1) <= ack;
 	end if;
 end process;
 
@@ -108,17 +110,17 @@ end process;
 --     Reset Start Data/Slave address/Word address   Ack   Stop  Done
                                                          
 -- I2C transfer state machine
-i2c_proc : process (RESET, CLK, ENA, go)
+i2c_proc : process (I_RESET, I_CLK, I_ENA, go)
 	begin
-		if RESET = '1' then
+		if I_RESET = '1' then
 			scl <= '1';
 			sda <= '1';
 			state <= s_idle;
 			ack <= '0'; -- No error
 			phase <= "00";
 	
-		elsif CLK'event and CLK = '1' then
-			if ENA = '1' then
+		elsif I_CLK'event and I_CLK = '1' then
+			if I_ENA = '1' then
 				phase <= phase + "01"; -- Next phase by default
 	
 				-- STATE: IDLE
@@ -163,7 +165,7 @@ i2c_proc : process (RESET, CLK, ENA, go)
 							end if;
 						when "10" =>
 							scl <= '1'; -- Raise SCL
-							shift_reg <= shift_reg(6 downto 0) & I2C_SDA; -- Input data and shift (MSb first)
+							shift_reg <= shift_reg(6 downto 0) & IO_I2C_SDA; -- Input data and shift (MSb first)
 						when "11" =>
 							if nbit = "111" then -- Next bit or advance to next state when done
 								state <= s_ack;
@@ -186,7 +188,7 @@ i2c_proc : process (RESET, CLK, ENA, go)
 						end if;
 					when "10" =>
 						scl <= '1';	-- Raise SCL
-						ack <= I2C_SDA; -- Sample ack bit
+						ack <= IO_I2C_SDA; -- Sample ack bit
 					when "11" =>
 						if mode(1) = '0' then
 							state <= s_idle;
@@ -227,7 +229,7 @@ i2c_proc : process (RESET, CLK, ENA, go)
 	end process;
 
 	-- Create open-drain outputs for I2C bus
-	I2C_SCL <= '0' when scl = '0' else 'Z';
-	I2C_SDA <= '0' when sda = '0' else 'Z';
+	IO_I2C_SCL <= '0' when scl = '0' else 'Z';
+	IO_I2C_SDA <= '0' when sda = '0' else 'Z';
 
 end rtc_arch;

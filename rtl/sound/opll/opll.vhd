@@ -227,7 +227,7 @@ architecture rtl of opll is
     signal rhythm   : std_logic;
 
     signal noise    : std_logic;
-    signal pgout    : std_logic_vector( 17 downto 0 );  --  ®”•” 9bit, ¬”•” 9bit 
+    signal pgout    : std_logic_vector( 17 downto 0 );  --  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 9bit, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 9bit 
     
     signal egout    : std_logic_vector( 12 downto 0 );
     
@@ -256,28 +256,28 @@ begin
     xout    <= xin;
     reset   <= not ic_n;
 
-    --  CPUƒAƒNƒZƒX§Œä ------------------------------------------------------
+    --  CPUï¿½Aï¿½Nï¿½Zï¿½Xï¿½ï¿½ï¿½ï¿½ ------------------------------------------------------
     process( xin, reset )
     begin
         if( reset ='1' )then
             opllwr  <= '0';
             opllptr <= (others =>'0');
         elsif( xin'event and xin = '1' )then
-            if( xena = '1' )then
+--           if( xena = '1' )then
                 if(    cs_n = '0' and we_n = '0' and a = '0' )then
-                    --  “à•”ƒŒƒWƒXƒ^ƒAƒhƒŒƒXw’èƒŒƒWƒXƒ^ ‚Ö‚Ì‘‚«‚İ 
+                    --  ï¿½ï¿½ï¿½ï¿½ï¿½Wï¿½Xï¿½^ï¿½Aï¿½hï¿½ï¿½ï¿½Xï¿½wï¿½èƒŒï¿½Wï¿½Xï¿½^ ï¿½Ö‚Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 
                     opllptr <= d;
                     opllwr  <= '0';
                 elsif( cs_n = '0' and we_n = '0' and a = '1' )then
-                    --  “à•”ƒŒƒWƒXƒ^ ‚Ö‚Ì‘‚«‚İ 
+                    --  ï¿½ï¿½ï¿½ï¿½ï¿½Wï¿½Xï¿½^ ï¿½Ö‚Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 
                     oplldat <= d;
                     opllwr  <= '1';
                 end if;
-            end if;
+--           end if;
         end if;
     end process;
 
-    --  ƒ^ƒCƒ~ƒ“ƒOƒWƒFƒlƒŒ[ƒ^ -----------------------------------------------
+    --  ï¿½^ï¿½Cï¿½~ï¿½ï¿½ï¿½Oï¿½Wï¿½Fï¿½lï¿½ï¿½ï¿½[ï¿½^ -----------------------------------------------
     s0: slotcounter
     generic map(
         delay   => 0
