@@ -1,6 +1,6 @@
--------------------------------------------------------------------[12.09.2015]
--- u16-TSConf rev.20150912
--- DEVBOARD ReVerSE-U16 Rev.C (EP4CE22E22C7) By MVV
+-------------------------------------------------------------------[27.05.2016]
+-- u16-TSConf rev.20160527
+-- DEVBOARD ReVerSE-U16 Rev.A (EP4CE22E22C8) By MVV
 -------------------------------------------------------------------------------
 -- 27.07.2014	первая версия
 -- 31.07.2014	добавлен транслятор PS/2, HDMI
@@ -18,6 +18,7 @@
 -- 06.08.2015	добавлен ym2413 (порт #xx7C/#xx7D)
 -- 10.08.2015	не используется сигнал EN при загрузке данных в порта ym2413
 -- 12.09.2015	TurboSound 2x ym2149
+-- 27.05.2016	Добавлен вывод звука через HDMI
 
 -- https://github.com/mvvproject/ReVerSE-U16/tree/master/u16_tsconf
 -- http://tslabs.info/forum/viewtopic.php?f=31&t=401
@@ -225,8 +226,8 @@ signal ssg1_a			: std_logic_vector(7 downto 0);
 signal ssg1_b			: std_logic_vector(7 downto 0);
 signal ssg1_c			: std_logic_vector(7 downto 0);
 -- AUDIO
-signal sound_left		: std_logic_vector(11 downto 0);
-signal sound_right		: std_logic_vector(11 downto 0);
+signal sound_left		: std_logic_vector(15 downto 0);
+signal sound_right		: std_logic_vector(15 downto 0);
 signal beeper			: std_logic_vector(7 downto 0);
 -- clock
 signal f0 			: std_logic;
@@ -1507,37 +1508,24 @@ port map (
 	O_MOSI			=> ASDO,
 	I_MISO			=> spi_miso);
 	
--- Delta-Sigma
-U19: entity work.dac
-generic map (
-	msbi_g			=> 11)
-port map (
-	I_CLK  			=> clk_84mhz,
-	I_RESET			=> areset,
-	I_DATA			=> sound_left,
-	O_DAC			=> DP);
-
--- Delta-Sigma
-U20: entity work.dac
-generic map (
-	msbi_g			=> 11)
-port map (
-	I_CLK  			=> clk_84mhz,
-	I_RESET 		=> areset,
-	I_DATA			=> sound_right,
-	O_DAC   		=> DN);
-
 -- HDMI
-inst_dvid: entity work.hdmi
+inst_dvid: entity work.av_hdmi
+generic map (
+	FREQ 			=> 28000000,
+	FS 				=> 32000,
+	N 				=> 4096,
+	CTS 			=> 28000)
 port map(
-	I_CLK			=> clk_hdmi,
 	I_CLK_PIXEL		=> clk_28mhz,
+	I_CLK_PIXEL_x5	=> clk_hdmi,
 	I_R			=> vred_ts,
 	I_G			=> vgrn_ts,
 	I_B			=> vblu_ts,
 	I_BLANK			=> csync_ts,
 	I_HSYNC			=> hsync_ts,
 	I_VSYNC			=> vsync_ts,
+	I_AUDIO_PCM_L 	=> sound_left,
+	I_AUDIO_PCM_R	=> sound_right,
 	O_TMDS_D0		=> HDMI_D0,
 	O_TMDS_D1		=> HDMI_D1,
 	O_TMDS_D2		=> HDMI_D2,
@@ -1660,8 +1648,8 @@ i2c_wr <= '1' when (cpu_a_bus(7 downto 5) = "100" and cpu_a_bus(3 downto 0) = "1
 
 -- Audio
 beeper <= (others => port_xxfe_reg(4));
-sound_left  <= ("0000" & beeper) + ("0000" & ssg0_a) + ("0000" & ssg0_b) + ("0000" & ssg1_a) + ("0000" & ssg1_b) + ("0000" & covox_a) + ("0000" & covox_b) + (("00" & opll_mo) - "1000000000");
-sound_right <= ("0000" & beeper) + ("0000" & ssg0_c) + ("0000" & ssg0_b) + ("0000" & ssg1_c) + ("0000" & ssg1_b) + ("0000" & covox_c) + ("0000" & covox_d) + (("00" & opll_ro) - "1000000000");
+sound_left  <= ("00000000" & beeper) + ("00000000" & ssg0_a) + ("00000000" & ssg0_b) + ("00000000" & ssg1_a) + ("00000000" & ssg1_b) + ("00000000" & covox_a) + ("00000000" & covox_b) + (("000000" & opll_mo) - "1000000000");
+sound_right <= ("00000000" & beeper) + ("00000000" & ssg0_c) + ("00000000" & ssg0_b) + ("00000000" & ssg1_c) + ("00000000" & ssg1_b) + ("00000000" & covox_c) + ("00000000" & covox_d) + (("000000" & opll_ro) - "1000000000");
 
 -- OPLL
 opll_cs_n <= '0' when (cpu_m1_n = '1' and cpu_iorq_n = '0' and cpu_a_bus(7 downto 1) = "0111110") else '1';	-- xx7C/xx7D[xxxxxxxx_0111110n]
