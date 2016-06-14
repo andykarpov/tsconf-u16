@@ -1033,11 +1033,8 @@ key_enter
 ; 25 (0x19),y		- изменить позицию по y
 ; 0			- конец строки
 
-str1	
-	db 23,0,0,17,#47,"ReVerSE-U16 DevBoard",17,7,13,13
-	db "FPGA SoftCore - TSConf",13
-	db "(build 20150912) By MVV",13,13
-
+info    INCLUDE "info.asm"
+	
 	db "Loading roms/zxevo.rom...",0
 str8
 	db "ASP configuration device ID 0x",0	; EPCS1	0x10 (1 Mb), EPCS4 0x12 (4 Mb), EPCS16 0x14 (16 Mb), EPCS64 0x16 (64 Mb)

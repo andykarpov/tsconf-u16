@@ -47,19 +47,6 @@ SRCS = ../rtl/t80/T80se.vhd \
        ../rtl/sound/opll/envelopegenerator.vhd \
        ../rtl/sound/opll/controller.vhd \
        ../rtl/sound/opll/attacktable.vhd \
-       ../rtl/sound/opll/RegisterMemory.vhd \
-       ../rtl/sound/opll/PhaseMemory.vhd \
-       ../rtl/sound/opll/PhaseGenerator.vhd \
-       ../rtl/sound/opll/OutputMemory.vhd \
-       ../rtl/sound/opll/OutputGenerator.vhd \
-       ../rtl/sound/opll/Opll.vhd \
-       ../rtl/sound/opll/Operator.vhd \
-       ../rtl/sound/opll/LinearTable.vhd \
-       ../rtl/sound/opll/FeedbackMemory.vhd \
-       ../rtl/sound/opll/EnvelopeMemory.vhd \
-       ../rtl/sound/opll/EnvelopeGenerator.vhd \
-       ../rtl/sound/opll/Controller.vhd \
-       ../rtl/sound/opll/AttackTable.vhd \
        ../rtl/i2c/i2c.vhd \
        ../rtl/ts/cpu/zsignals.v \
        ../rtl/ts/cpu/zports.v \
@@ -114,65 +101,9 @@ SRCS = ../rtl/t80/T80se.vhd \
 ###################################################################
 # Additional variables
 
-QUARTUS_HOME := $(shell dirname `which quartus_pgm`)
 PWD := $(shell pwd)
+QUARTUS_HOME := $(shell dirname `which quartus_pgm`)
 ASSIGNMENT_FILES = $(PROJECT)_$(BOARDFILE).qpf $(PROJECT)_$(BOARDFILE).qsf
-
-###################################################################
-# COF file contents
-define newline
-
-
-endef
-
-define COF
-<?xml version="1.0" encoding="US-ASCII" standalone="yes"?>
-<cof>
-	<eprom_name>$(FLASH_CONFIG)</eprom_name>
-	<flash_loader_device>$(FLASH_LOADER)</flash_loader_device>
-	<output_filename>$(PROJECT)_$(BOARDFILE).jic</output_filename>
-	<n_pages>1</n_pages>
-	<width>1</width>
-	<mode>7</mode>
-	<hex_block>
-		<hex_filename>../rom/zxevo.hex</hex_filename>
-		<hex_addressing>relative</hex_addressing>
-		<hex_offset>835584</hex_offset>
-	</hex_block>
-	<sof_data>
-		<start_address>00000000</start_address>
-		<user_name>Page_0</user_name>
-		<page_flags>1</page_flags>
-		<bit0>
-			<sof_filename>$(PROJECT)_$(BOARDFILE).sof</sof_filename>
-		</bit0>
-	</sof_data>
-	<version>6</version>
-	<create_cvp_file>0</create_cvp_file>
-	<auto_create_rpd>0</auto_create_rpd>
-	<options>
-		<map_file>1</map_file>
-	</options>
-</cof>
-endef
-export COF
-
-define CDF
-/* Quartus CDF */
-JedecChain;
-        FileRevision(JESD32A);
-        DefaultMfr(6E);
-
-        P ActionCode(Cfg)
-                Device PartName($(FLASH_LOADER)) Path("$(PWD)/") File("$(PROJECT)_$(BOARDFILE).jic") MfrSpec(OpMask(1) SEC_Device($(FLASH_CONFIG)) Child_OpMask(1 1));
-
-ChainEnd;
-
-AlteraBegin;
-        ChainType(JTAG);
-AlteraEnd;
-endef
-export CDF
 
 ###################################################################
 # Main Targets
@@ -185,27 +116,32 @@ export CDF
 all: smart.log $(PROJECT)_$(BOARDFILE).asm.rpt $(PROJECT)_$(BOARDFILE).sta.rpt $(PROJECT)_$(BOARDFILE).cof
 
 clean: 
-	rm -rf *.rpt 
-	rm -rf *.chg 
-	rm -rf smart.log 
-	rm -rf *.htm 
-	rm -rf *.eqn 
-	rm -rf *.pin 
-	rm -rf *.sof 
-	rm -rf *.pof 
-	rm -rf *.jic 
-	rm -rf db 
-	rm -rf incremental_db
-	rm -rf *.qsf
-	rm -rf *.qpf
-	rm -rf *.summary
-	rm -rf *.smsg
-	rm -rf *.cof
-	rm -rf *.cdf
-	rm -rf *.jdi
-	rm -rf *.map
-	rm -rf *.sld
-	rm -rf PLLJ_PLLSPE_INFO.txt
+	rm -f *.rpt \
+		*.chg \
+		smart.log \
+		*.htm \
+		*.eqn \
+		*.pin \
+		*.sof \
+		*.pof \
+		*.jic \
+		*.qsf \
+		*.qpf \
+		*.summary \
+		*.smsg \
+		*.cof \
+		*.cdf \
+		*.jdi \
+		*.map \
+		*.sld \
+		PLLJ_PLLSPE_INFO.txt \
+		../loader/loader.bin \
+		../loader/loader.hex \
+		../loader/info.asm \
+		../rom/*.hex \
+
+	rm -rf db \
+		incremental_db \
 
 map: smart.log $(PROJECT)_$(BOARDFILE).map.rpt
 fit: smart.log $(PROJECT)_$(BOARDFILE).fit.rpt
@@ -252,10 +188,10 @@ smart.log: $(ASSIGNMENT_FILES)
 ###################################################################
 
 $(ASSIGNMENT_FILES):
+
+	./build $(PROJECT) $(BOARDFILE) $(PART) $(FLASH_LOADER) $(FLASH_CONFIG)
 	quartus_sh --prepare -f $(FAMILY) -t $(TOP_LEVEL_ENTITY) $(PROJECT)_$(BOARDFILE) 
 	-cat $(BOARDFILE) >> $(PROJECT)_$(BOARDFILE).qsf
-	echo "$$COF" > $(PROJECT)_$(BOARDFILE).cof
-	echo "$$CDF" > $(PROJECT)_$(BOARDFILE).cdf
 map.chg:
 	$(STAMP) map.chg
 fit.chg:
