@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------
-//-- (c) 2015 Alexey Spirkov
+//-- (c) 2015-2016 Alexey Spirkov
 //-- I am happy for anyone to use this for non-commercial use.
 //-- If my vhdl/c files are used commercially or otherwise sold,
 //-- please contact me for explicit permission at me _at_ alsp.net.
@@ -31,9 +31,9 @@
 
 #define ON 1
 #define OFF 0
+#define PKGSTARTPIN GPIO_A_1
 #define LEDPIN GPIO_A_2
-#define PKGSTARTPIN GPIO_A_5
-#define NEWMODEPIN GPIO_A_3
+//#define NEWMODEPIN GPIO_A_3
 
 
 void firmware(uint8 hostId, uint8 hidId);
@@ -41,14 +41,13 @@ void firmware(uint8 hostId, uint8 hidId);
 VOS_HANDLE hUART; // UART Interface Driver
 VOS_HANDLE hGPIO_PORT_A; // GPIO Port A Driver
 
-#define MAX_STRING_LEN		 255
+#define MAX_STRING_LEN 255
 uint8 buf[64];
 uint8 buf2[64];
 
 vos_mutex_t rxLock;
 vos_mutex_t spiLock;
 int connectedCount = 0;
-int speed=9600;
 
 #ifdef DEBUG
 
@@ -96,29 +95,26 @@ void number(uint8 val)
 
 void iomux_setup(void)
 {	
-	// Debugger to pin 11 as Bi-Directional.
-	vos_iomux_define_bidi(199, IOMUX_IN_DEBUGGER, IOMUX_OUT_DEBUGGER);
-	// GPIO_Port_A_3 to pin 32 as Input.
-	vos_iomux_define_input(32, IOMUX_IN_GPIO_PORT_A_3);
-	vos_iocell_set_config(32, 3, 0, 1, VOS_IOCELL_PULL_UP_75K);
-	// GPIO_Port_A_2 to pin 14 as Output.
-	vos_iomux_define_output(14, IOMUX_OUT_GPIO_PORT_A_2);
-	vos_iocell_set_config(14, 3, 0, 1, 0);
-	// GPIO_Port_A_5 to pin 30 as Output.
-	vos_iomux_define_output(30, IOMUX_OUT_GPIO_PORT_A_5);
-	vos_iocell_set_config(30, 3, 0, 1, VOS_IOCELL_PULL_DOWN_75K);
-	// UART_TXD to pin 23 as Output.
-	vos_iomux_define_output(23, IOMUX_OUT_UART_TXD);
-	// UART_RXD to pin 24 as Input.
-	vos_iomux_define_input(24, IOMUX_IN_UART_RXD);
-	// GPIO_Port_A_1 to pin 12 as Input.
-	vos_iomux_define_input(12, IOMUX_IN_GPIO_PORT_A_1);
-	// UART_RTS_N to pin 25 as Output.
-	vos_iomux_define_output(25, IOMUX_OUT_UART_RTS_N);
-	// UART_CTS_N to pin 26 as Input.
-	vos_iomux_define_input(26, IOMUX_IN_UART_CTS_N);
-	vos_iocell_set_config(26, 0, 0, 0, 1);
-
+		// Debugger to pin 11 as Bi-Directional.
+		vos_iomux_define_bidi(11, IOMUX_IN_DEBUGGER, IOMUX_OUT_DEBUGGER);
+		// GPIO_Port_A_1 to pin 12 as Output.
+		vos_iomux_define_output(12, IOMUX_OUT_GPIO_PORT_A_1);
+		vos_iocell_set_config(12, 0, 0, 0, 2);
+		// GPIO_Port_A_2 to pin 14 as Output.
+		vos_iomux_define_output(14, IOMUX_OUT_GPIO_PORT_A_2);
+		vos_iocell_set_config(14, 3, 0, 0, 2);
+		// GPIO_Port_A_3 to pin 15 as Output.
+		vos_iomux_define_output(15, IOMUX_OUT_GPIO_PORT_A_3);
+		vos_iocell_set_config(15, 0, 0, 0, 2);
+		// UART_TXD to pin 23 as Output.
+		vos_iomux_define_output(23, IOMUX_OUT_UART_TXD);
+		// UART_RXD to pin 24 as Input.
+		vos_iomux_define_input(24, IOMUX_IN_UART_RXD);
+		// UART_RTS_N to pin 25 as Output.
+		vos_iomux_define_output(25, IOMUX_OUT_UART_RTS_N);
+		// UART_CTS_N to pin 26 as Input.
+		vos_iomux_define_input(26, IOMUX_IN_UART_CTS_N);
+		vos_iocell_set_config(26, 0, 0, 0, 1);
 }
 
 /* Main code - entry point to firmware */
@@ -154,9 +150,8 @@ void main(void)
 	
 	// UART set baud rate
 	uart_iocb.ioctl_code = VOS_IOCTL_UART_SET_BAUD_RATE;
-	uart_iocb.set.uart_baud_rate = 9600;
+	uart_iocb.set.uart_baud_rate = 115200;
 	vos_dev_ioctl(hUART, &uart_iocb);
-	speed = 9600;
 	
 	// Initialise GPIO A
 	gpioContextA.port_identifier = GPIO_PORT_A;
@@ -164,8 +159,8 @@ void main(void)
 	hGPIO_PORT_A = vos_dev_open(VOS_DEV_GPIO_PORT_A);
 
 	// Init GPIO pins
-	vos_gpio_set_port_mode(GPIO_PORT_A, 0b00100100);	// PIN 2 and 5 to output 
-	vos_gpio_write_port(GPIO_PORT_A, 0);
+	vos_gpio_set_port_mode(GPIO_PORT_A, 0b00101110);	// PIN to output 
+	vos_gpio_write_port(GPIO_PORT_A, 0x00);
 
 	
 	// Initialise USB HID Device
@@ -184,8 +179,6 @@ void main(void)
 	// init mutexes
 	vos_init_mutex(&rxLock, 1);
 	vos_unlock_mutex(&rxLock);
-	vos_init_mutex(&spiLock, 1);
-	vos_unlock_mutex(&spiLock);
 
 	iomux_setup();
 
@@ -298,7 +291,7 @@ void firmware(uint8 hostId, uint8 hidId)
 	uint8 deviceType = 0;
 	VOS_HANDLE hUSBHOST; 
 	VOS_HANDLE hUSBHOST_HID;
-	uint8 * localBuf = hostId==0?&buf[0]:&buf2[0];
+	uint8 * localBuf = hostId == 0 ? &buf[0] : &buf2[0];
 
 	do
 	{
@@ -306,8 +299,13 @@ void firmware(uint8 hostId, uint8 hidId)
 
 		do
 		{				
-			vos_delay_msecs(1000);
 			// wait for enumeration to complete
+			vos_delay_msecs(250);
+			if(!connectedCount)
+				led(OFF);
+			vos_delay_msecs(250);
+			led(ON);
+			
 #ifdef DEBUG			
 			message("Waiting for enumeration ");
 			number(hostId);
@@ -358,20 +356,16 @@ void firmware(uint8 hostId, uint8 hidId)
 #ifdef DEBUG			
 			{
 				int i;
-				message("Report descriptor:\n");
-				message(eol);					
+				message("Report descriptor:\r");
 				for(i = 0; i < 0x40; i++)
 				{
-					number((unsigned char) localBuf[i++]);
-					message(" ");
-					number((unsigned char) localBuf[i++]);
-					message(" ");
-					number((unsigned char) localBuf[i++]);
-					message(" ");
-					number((unsigned char) localBuf[i++]);
-					message(" ");
-					message(eol);					
-				}				
+					if (i==0x00 || i==0x08 || i==0x10 || i==0x18 || i==0x20 || i==0x28 || i==0x30 || i==0x38)
+					{
+						message(eol); number((unsigned char) i); message(": ");
+					}
+					number((unsigned char) localBuf[i]); message(" ");
+				}
+				message(eol);
 			}
 #endif		
 			// check for Generic desktop and usage start
@@ -408,44 +402,14 @@ void firmware(uint8 hostId, uint8 hidId)
 						if (vos_dev_read(hUSBHOST_HID, localBuf, (uint16)reportLen, &num_read) == USBHOSTHID_OK)
 						{
 							uint8 gpioval;
-							vos_lock_mutex(&spiLock);		
 							
 							// pkg start gpio
 							vos_gpio_write_pin(PKGSTARTPIN, 1);
 							
-							vos_gpio_read_pin(NEWMODEPIN, &gpioval);
-							
-							if(!gpioval)
-							{
-								common_ioctl_cb_t uart_iocb;
-
-								if(speed == 9600)
-								{
-									// UART set baud rate
-									uart_iocb.ioctl_code = VOS_IOCTL_UART_SET_BAUD_RATE;
-									uart_iocb.set.uart_baud_rate = 115200;
-									vos_dev_ioctl(hUART, &uart_iocb);
-									speed = 115200;
-								}
-								
-								// send port id in first bit and deviceType in remaining
-								number(hostId << 7 | deviceType);								
-								// number(reportLen);
-							}
-							else
-							{
-								common_ioctl_cb_t uart_iocb;
-								if(speed == 115200)
-								{
-									// UART set baud rate
-									uart_iocb.ioctl_code = VOS_IOCTL_UART_SET_BAUD_RATE;
-									uart_iocb.set.uart_baud_rate = 9600;
-									vos_dev_ioctl(hUART, &uart_iocb);
-									speed = 9600;
-								}								
-								
-							}
-							
+							// send port id in first bit and deviceType in remaining
+							number(hostId << 7 | deviceType);								
+							// number(reportLen);
+						
 							for (byteCount = 0; byteCount < num_read; byteCount++)
 							{
 								number((unsigned char) localBuf[byteCount]);
@@ -460,9 +424,6 @@ void firmware(uint8 hostId, uint8 hidId)
 							message(eol);
 #endif				
 							vos_gpio_write_pin(PKGSTARTPIN, 0);
-							
-							vos_unlock_mutex(&spiLock);	
-							
 						}
 						else
 						{

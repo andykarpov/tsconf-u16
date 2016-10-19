@@ -25,28 +25,9 @@ SRCS = ../rtl/t80/T80se.vhd \
        ../rtl/t80/T80_MCode.vhd \
        ../rtl/t80/T80_ALU.vhd \
        ../rtl/t80/T80.vhd \
-       ../rtl/vns2hid/receiver.vhd \
-       ../rtl/vns2hid/deserializer.vhd \
+       ../rtl/hid/receiver.vhd \
+       ../rtl/hid/deserializer.vhd \
        ../rtl/sound/soundrive/soundrive.vhd \
-       ../rtl/sound/opll/voicerom.vhd \
-       ../rtl/sound/opll/voicememory.vhd \
-       ../rtl/sound/opll/vm2413.vhd \
-       ../rtl/sound/opll/temporalmixer.vhd \
-       ../rtl/sound/opll/slotcounter.vhd \
-       ../rtl/sound/opll/sinetable.vhd \
-       ../rtl/sound/opll/registermemory.vhd \
-       ../rtl/sound/opll/phasememory.vhd \
-       ../rtl/sound/opll/phasegenerator.vhd \
-       ../rtl/sound/opll/outputmemory.vhd \
-       ../rtl/sound/opll/outputgenerator.vhd \
-       ../rtl/sound/opll/opll.vhd \
-       ../rtl/sound/opll/operator.vhd \
-       ../rtl/sound/opll/lineartable.vhd \
-       ../rtl/sound/opll/feedbackmemory.vhd \
-       ../rtl/sound/opll/envelopememory.vhd \
-       ../rtl/sound/opll/envelopegenerator.vhd \
-       ../rtl/sound/opll/controller.vhd \
-       ../rtl/sound/opll/attacktable.vhd \
        ../rtl/i2c/i2c.vhd \
        ../rtl/ts/cpu/zsignals.v \
        ../rtl/ts/cpu/zports.v \
@@ -55,11 +36,10 @@ SRCS = ../rtl/t80/T80se.vhd \
        ../rtl/ts/cpu/zint.v \
        ../rtl/ts/cpu/zclock.v \
        ../rtl/t80/T80s.vhd \
-       ../rtl/hdmi/serializer.vhd \
-       ../rtl/hdmi/av_hdmi.vhd \
+       ../rtl/hdmi/altddio_out1.vhd \
+       ../rtl/hdmi/hdmi.vhd \
        ../rtl/hdmi/encoder.vhd \
        ../rtl/hdmi/hdmidataencoder.v \
-       ../rtl/hdmi/hdmidelay.vhd \
        ../rtl/dac/dac.vhd \
        ../rtl/tsconf.vhd \
        ../rtl/pll/altpll0.vhd \

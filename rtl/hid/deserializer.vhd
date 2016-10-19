@@ -1,7 +1,7 @@
--------------------------------------------------------------------[12.09.2015]
+-------------------------------------------------------------------[30.08.2016]
 -- CONTROLLER USB HID
 -------------------------------------------------------------------------------
--- Engineer: 	MVV
+-- Engineer: 	MVV <mvvproject@gmail.com>
 
 library IEEE; 
 use IEEE.std_logic_1164.all; 
@@ -21,6 +21,7 @@ port (
 	O_MOUSE_Y		: out std_logic_vector(7 downto 0);
 	O_MOUSE_Z		: out std_logic_vector(7 downto 0);
 	O_MOUSE_BUTTONS		: out std_logic_vector(7 downto 0);
+	O_KEYBOARD_REPORT	: out std_logic_vector(55 downto 0);
 	O_KEYBOARD_SCAN		: out std_logic_vector(4 downto 0);
 	O_KEYBOARD_SCANCODE	: out std_logic_vector(7 downto 0);
 	O_KEYBOARD_FKEYS	: out std_logic_vector(4 downto 0);
@@ -40,6 +41,7 @@ architecture rtl of deserializer is
 	signal y		: std_logic_vector(8 downto 0) := "000000000";
 	signal z		: std_logic_vector(8 downto 0) := "111111111";
 	signal b		: std_logic_vector(7 downto 0) := "00000000";
+	signal keyboard_report	: std_logic_vector(55 downto 0);
 	
 begin
 
@@ -69,6 +71,8 @@ begin
 	O_KEYBOARD_JOYKEYS	<= keys(8);
 	O_KEYBOARD_FKEYS	<= keys(9);
 	O_KEYBOARD_SCANCODE	<= scancode;
+	O_KEYBOARD_REPORT	<= keyboard_report;
+	
 	-- Mouse
 	O_MOUSE_BUTTONS		<= b;
 	O_MOUSE_X		<= x(7 downto 0);
@@ -137,6 +141,17 @@ begin
 						end case;
 						
 					when x"6" =>	-- Keyboard
+						case count is
+							when 1 => keyboard_report( 7 downto 0) <= data;
+							when 3 => keyboard_report(15 downto 8) <= data;
+							when 4 => keyboard_report(23 downto 16) <= data;
+							when 5 => keyboard_report(31 downto 24) <= data;
+							when 6 => keyboard_report(39 downto 32) <= data;
+							when 7 => keyboard_report(47 downto 40) <= data;
+							when 8 => keyboard_report(55 downto 48) <= data;
+							when others => null;
+						end case;
+						
 						if count = 1 then
 --							if data(0) = '1' then end if;	-- E0 Left Control
 							if data(1) = '1' then keys(0)(0) <= '0'; scancode <= X"12"; end if;	-- E1 Left shift (CAPS SHIFT)
