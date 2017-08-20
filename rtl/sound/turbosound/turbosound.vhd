@@ -1,4 +1,4 @@
--------------------------------------------------------------------[12.09.2015]
+-------------------------------------------------------------------[06.11.2016]
 -- TurboSound
 -------------------------------------------------------------------------------
 library IEEE;
@@ -43,6 +43,26 @@ architecture rtl of turbosound is
 	signal bc1	: std_logic;
 	signal bdir	: std_logic;
 	signal ssg	: std_logic;
+	
+component ym2149 is
+port (
+	CLK		: in std_logic;				-- Global clock
+	CE		: in std_logic;				-- PSG Clock enable
+	RESET		: in std_logic;				-- Chip RESET (set all Registers to '0', active hi)
+	BDIR		: in std_logic;				-- Bus Direction (0 - read , 1 - write)
+	BC		: in std_logic;				-- Bus control
+	DI		: in std_logic_vector(7 downto 0);	-- Data In
+	DO		: out std_logic_vector(7 downto 0);	-- Data Out
+	CHANNEL_A	: out std_logic_vector(7 downto 0);	-- PSG Output channel A
+	CHANNEL_B	: out std_logic_vector(7 downto 0);	-- PSG Output channel B
+	CHANNEL_C	: out std_logic_vector(7 downto 0);	-- PSG Output channel C
+	ACTIVE		: out std_logic_vector(5 downto 0);
+	SEL		: in std_logic;
+	A8		: in std_logic;
+	MODE		: in std_logic);
+end component;
+	
+	
 begin
 	bdir	<= '1' when (I_M1_N = '1' and I_IORQ_N = '0' and I_WR_N = '0' and I_ADDR(15) = '1' and I_ADDR(1) = '0') else '0';
 	bc1	<= '1' when (I_M1_N = '1' and I_IORQ_N = '0' and I_ADDR(15) = '1' and I_ADDR(14) = '1' and I_ADDR(1) = '0') else '0';
@@ -60,55 +80,38 @@ begin
 		end if;
 	end process;
 
-	ssg0: entity work.ym2149
-		port map(
-			I_RESET_N 		=> I_RESET_N,
-			I_CLOCK     		=> I_CLK,
-			I_ENA			=> I_ENA,
-			I_DA    		=> I_DATA,
-			O_DA    		=> O_SSG0_DA,
-			O_DA_OE_N		=> open,
-			I_A9_N			=> '0',
-			I_A8			=> not ssg,
-			I_BDIR			=> bdir,
-			I_BC2			=> '1',
-			I_BC1			=> bc1,
-			I_SEL_N 		=> '1',
-			O_AUDIO			=> O_SSG0_AUDIO,
-			O_AUDIO_A		=> O_SSG0_AUDIO_A,
-			O_AUDIO_B		=> O_SSG0_AUDIO_B,
-			O_AUDIO_C		=> O_SSG0_AUDIO_C,
-			I_IOA			=> I_SSG0_IOA,
-			O_IOA			=> O_SSG0_IOA,
-			O_IOA_OE_N		=> open,
-			I_IOB			=> I_SSG0_IOB,
-			O_IOB			=> O_SSG0_IOB,
-			O_IOB_OE_N		=> open
-		);
+ssg0: ym2149
+port map (
+	CLK		=> I_CLK,	
+	CE		=> I_ENA,
+	RESET		=> not I_RESET_N,
+	BDIR		=> bdir,
+	BC		=> bc1,
+	DI		=> I_DATA,
+	DO		=> O_SSG0_DA,
+	CHANNEL_A	=> O_SSG0_AUDIO_A,
+	CHANNEL_B	=> O_SSG0_AUDIO_B,
+	CHANNEL_C	=> O_SSG0_AUDIO_C,
+	ACTIVE		=> open,
+	SEL		=> '0',
+	A8		=> not ssg,
+	MODE		=> '0');
+	
+ssg1: ym2149
+port map (
+	CLK		=> I_CLK,	
+	CE		=> I_ENA,
+	RESET		=> not I_RESET_N,
+	BDIR		=> bdir,
+	BC		=> bc1,
+	DI		=> I_DATA,
+	DO		=> O_SSG1_DA,
+	CHANNEL_A	=> O_SSG1_AUDIO_A,
+	CHANNEL_B	=> O_SSG1_AUDIO_B,
+	CHANNEL_C	=> O_SSG1_AUDIO_C,
+	ACTIVE		=> open,
+	SEL		=> '0',
+	A8		=> ssg,
+	MODE		=> '0');	
 
-	ssg1: entity work.ym2149
-		port map(
-			I_RESET_N 		=> I_RESET_N,
-			I_CLOCK     		=> I_CLK,
-			I_ENA			=> I_ENA,
-			I_DA    		=> I_DATA,
-			O_DA    		=> O_SSG1_DA,
-			O_DA_OE_N		=> open,
-			I_A9_N			=> '0',
-			I_A8			=> ssg,
-			I_BDIR			=> bdir,
-			I_BC2			=> '1',
-			I_BC1			=> bc1,
-			I_SEL_N 		=> '1',
-			O_AUDIO			=> O_SSG1_AUDIO,
-			O_AUDIO_A		=> O_SSG1_AUDIO_A,
-			O_AUDIO_B		=> O_SSG1_AUDIO_B,
-			O_AUDIO_C		=> O_SSG1_AUDIO_C,
-			I_IOA			=> I_SSG1_IOA,
-			O_IOA			=> O_SSG1_IOA,
-			O_IOA_OE_N		=> open,
-			I_IOB			=> I_SSG1_IOB,
-			O_IOB			=> O_SSG1_IOB,
-			O_IOB_OE_N		=> open
-		);
-end rtl;
+end rtl;	
