@@ -1,4 +1,4 @@
--------------------------------------------------------------------[30.08.2016]
+-------------------------------------------------------------------[31.12.2016]
 -- CONTROLLER USB HID
 -------------------------------------------------------------------------------
 -- Engineer: 	MVV <mvvproject@gmail.com>
@@ -17,10 +17,14 @@ port (
 	I_RX			: in std_logic;
 	I_NEWFRAME		: in std_logic;
 	I_ADDR			: in std_logic_vector(7 downto 0);
-	O_MOUSE_X		: out std_logic_vector(7 downto 0);
-	O_MOUSE_Y		: out std_logic_vector(7 downto 0);
-	O_MOUSE_Z		: out std_logic_vector(7 downto 0);
-	O_MOUSE_BUTTONS		: out std_logic_vector(7 downto 0);
+	O_MOUSE0_X		: out std_logic_vector(7 downto 0);
+	O_MOUSE0_Y		: out std_logic_vector(7 downto 0);
+	O_MOUSE0_Z		: out std_logic_vector(7 downto 0);
+	O_MOUSE0_BUTTONS	: out std_logic_vector(7 downto 0);
+	O_MOUSE1_X		: out std_logic_vector(7 downto 0);
+	O_MOUSE1_Y		: out std_logic_vector(7 downto 0);
+	O_MOUSE1_Z		: out std_logic_vector(7 downto 0);
+	O_MOUSE1_BUTTONS	: out std_logic_vector(7 downto 0);
 	O_KEYBOARD_REPORT	: out std_logic_vector(55 downto 0);
 	O_KEYBOARD_SCAN		: out std_logic_vector(4 downto 0);
 	O_KEYBOARD_SCANCODE	: out std_logic_vector(7 downto 0);
@@ -35,12 +39,16 @@ architecture rtl of deserializer is
 	signal count		: integer range 0 to 8;
 	signal data		: std_logic_vector(7 downto 0);
 	signal ready		: std_logic;
-	signal device_id	: std_logic_vector(3 downto 0);
+	signal device_id	: std_logic_vector(7 downto 0);
 	signal scancode		: std_logic_vector(7 downto 0);
-	signal x		: std_logic_vector(8 downto 0) := "111111111";
-	signal y		: std_logic_vector(8 downto 0) := "000000000";
-	signal z		: std_logic_vector(8 downto 0) := "111111111";
-	signal b		: std_logic_vector(7 downto 0) := "00000000";
+	signal x0		: std_logic_vector(8 downto 0) := "111111111";
+	signal y0		: std_logic_vector(8 downto 0) := "000000000";
+	signal z0		: std_logic_vector(8 downto 0) := "111111111";
+	signal b0		: std_logic_vector(7 downto 0) := "00000000";
+	signal x1		: std_logic_vector(8 downto 0) := "111111111";
+	signal y1		: std_logic_vector(8 downto 0) := "000000000";
+	signal z1		: std_logic_vector(8 downto 0) := "111111111";
+	signal b1		: std_logic_vector(7 downto 0) := "00000000";
 	signal keyboard_report	: std_logic_vector(55 downto 0);
 	
 begin
@@ -74,10 +82,14 @@ begin
 	O_KEYBOARD_REPORT	<= keyboard_report;
 	
 	-- Mouse
-	O_MOUSE_BUTTONS		<= b;
-	O_MOUSE_X		<= x(7 downto 0);
-	O_MOUSE_Y		<= y(7 downto 0);
-	O_MOUSE_Z		<= z(7 downto 0);
+	O_MOUSE0_BUTTONS	<= b0;
+	O_MOUSE0_X		<= x0(7 downto 0);
+	O_MOUSE0_Y		<= y0(7 downto 0);
+	O_MOUSE0_Z		<= z0(7 downto 0);
+	O_MOUSE1_BUTTONS	<= b1;
+	O_MOUSE1_X		<= x1(7 downto 0);
+	O_MOUSE1_Y		<= y1(7 downto 0);
+	O_MOUSE1_Z		<= z1(7 downto 0);
 	
 	process (I_RESET, I_CLK, data, I_NEWFRAME, ready)
 	begin
@@ -93,17 +105,21 @@ begin
 			keys(8) <= (others => '0');
 			keys(9) <= (others => '0');
 			count <= 0;
-			x <= (others => '1');
-			y <= (others => '0');
-			z <= (others => '1');
-			b <= (others => '0');
+			x0 <= (others => '1');
+			y0 <= (others => '0');
+			z0 <= (others => '1');
+			b0 <= (others => '0');
+			x1 <= (others => '1');
+			y1 <= (others => '0');
+			z1 <= (others => '1');
+			b1 <= (others => '0');
 			scancode <= (others => '1');
 		elsif I_NEWFRAME = '0' then
 			count <= 0;
 		elsif I_CLK'event and I_CLK = '1' and ready = '1' then
 			if count = 0 then
 				count <= 1;
-				device_id <= data(3 downto 0);
+				device_id <= data;
 				case data(3 downto 0) is
 					when x"6" =>	-- Keyboard
 						keys(0) <= (others => '1');
@@ -122,7 +138,7 @@ begin
 			else
 				count <= count + 1;
 				case device_id is
-					when x"2" =>	-- Mouse
+					when x"02" =>	-- Mouse0
 					-- Input report - 5 bytes
  					--     Byte | D7      D6      D5      D4      D3      D2      D1      D0
 					--    ------+---------------------------------------------------------------------
@@ -133,14 +149,23 @@ begin
 					--      4   |                    Horizontal (Tilt) Wheel
 					
 						case count is
-							when 1 => b <= data;		-- Buttons
-							when 2 => x <= x + data;	-- Left/Right delta
-							when 3 => y <= y + data;	-- Up/Down delta
-							when 4 => z <= z + data;	-- Wheel delta
+							when 1 => b0 <= data;		-- Buttons
+							when 2 => x0 <= x0 + data;	-- Left/Right delta
+							when 3 => y0 <= y0 + data;	-- Up/Down delta
+							when 4 => z0 <= z0 + data;	-- Wheel delta
+							when others => null;
+						end case;
+
+					when x"82" =>	-- Mouse1
+						case count is
+							when 1 => b1 <= data;		-- Buttons
+							when 2 => x1 <= x1 + data;	-- Left/Right delta
+							when 3 => y1 <= y1 + data;	-- Up/Down delta
+							when 4 => z1 <= z1 + data;	-- Wheel delta
 							when others => null;
 						end case;
 						
-					when x"6" =>	-- Keyboard
+					when x"06" | x"86" =>	-- Keyboard
 						case count is
 							when 1 => keyboard_report( 7 downto 0) <= data;
 							when 3 => keyboard_report(15 downto 8) <= data;

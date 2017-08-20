@@ -14,7 +14,7 @@ FAMILY = "Cyclone IV E"
 PART = EP4CE22E22C8
 FLASH_CONFIG = EPCS16
 FLASH_LOADER = EP4CE22
-BOARDFILE = revA
+BOARDFILE = revC
 
 ###################################################################
 # Sources
@@ -74,9 +74,9 @@ SRCS = ../rtl/t80/T80se.vhd \
        ../rtl/ts/cpu/memory/cache_addr.v \
        ../rtl/rom/rom.vhd \
        ../rtl/ts/video/lut.vhd \
-       ../rtl/sound/turbosound/vol_table_array.vhd \
        ../rtl/sound/turbosound/turbosound.vhd \
-       ../rtl/sound/turbosound/ym2149.vhd \
+       ../rtl/sound/turbosound/ym2149.sv \
+       ../rtl/sound/saa1099/saa1099.sv \
 
 ###################################################################
 # Additional variables

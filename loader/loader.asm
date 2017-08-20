@@ -1,21 +1,9 @@
  		DEVICE	ZXSPECTRUM48
-; -----------------------------------------------------------------[30.08.2016]
-; ReVerSE-U16 Loader (build 20160830) By MVV
+; -----------------------------------------------------------------[31.12.2016]
+; ReVerSE-U16 Loader (build 20161231) By MVV
 ; -----------------------------------------------------------------------------
-; 30.07.2014	первая версия
-; 03.08.2014	добавлен i2c
-; 11.08.2014	добавлен enc424j600
-; 25.08.2014	добавлен Device Address в драйвере I2C, DDC
-; 09.09.2014	доработана печать из дискрипторов EDID, установка RTC
-; 10.09.2014	просмотр дескрипторов начиная с адреса 48h, проверка были ли прочитаны данные по i2c
-; 02.11.2014
-; 22.11.2014	добавлено чтение silicon ID spiflash w25q64fv, замена m25p16
-; 24.03.2014	добавлена загрузка ROM с SD Card
-; 06.08.2015	добавлена поддержка ym2413
-; 10.08.2015	не используется сигнал EN при загрузке данных в порта ym2413
-; 12.09.2015
 
-system_port	equ #0001	; bit2 = 0:Loader ON, 1:Loader OFF; bit0 = 0:w25q64fv, 1:enc424j600
+system_port	equ #0001	; bit2 = 0:Loader ON, 1:Loader OFF; bit0 = 0:w25q64fv, 1:cd card
 pr_param	equ #7f00
 page3init	equ #7f04
 cursor_pos	equ #7f05
@@ -29,7 +17,6 @@ TOTAL_PAGE	equ 32
 startprog:
 	di
 	ld sp,#7ffe
-
 	xor a
 	ld bc,system_port
 	out (c),a
@@ -101,9 +88,12 @@ LOAD_16kb
 	jr RTC_INIT
 ERR
 	ld sp,#7ffe
-	ld hl,str_absent
+	ld hl,str_error
 	call print_str
 
+	ld a,%00000001
+	ld bc,system_port
+	out (c),a
 ; ID read
 	ld hl,str8
 	call print_str
@@ -177,7 +167,7 @@ RTC_INIT
 	call print_str
 	call rtc_read
 
-	ld hl,str_absent	; отсутствует устройство
+	ld hl,str_error		; отсутствует устройство
 	jr z,spi_loader4
 	ld hl,str3		; завершено
 spi_loader4
@@ -186,9 +176,9 @@ spi_loader4
 	call rtc_data
 	call ddc_read
 
-	ld hl,str7
-	call print_str
-	call mac_read
+;	ld hl,str7
+;	call print_str
+;	call mac_read
 
 	ld hl,str0		; any key
 	call print_str
@@ -224,53 +214,6 @@ anykey
 	cp #5a			; <ENTER> ?
 	jr nz,anykey
 	ret
-
-; -----------------------------------------------------------------------------
-; ENC424J600 MAC read
-; -----------------------------------------------------------------------------
-mac_read
-	ld a,%00000001
-	ld bc,system_port
-	out (c),a
-
-	call spi_start
-	ld d,#20		; RCRU
-	call spi_w
-	ld d,#60		; Address (#60 = MAAR3L .. #65 = MAAR1H)
-	call spi_w
-	ld b,#06
-	ld hl,buffer
-mac_read1
-	call spi_r
-	ld (hl),a
-	inc hl
-	djnz mac_read1
-	call spi_end
-
-mac_read3
-	ld a,(buffer+4)
-	call print_hex
-	ld a,"-"
-	call print_char
-	ld a,(buffer+5)
-	call print_hex
-	ld a,"-"
-	call print_char
-	ld a,(buffer+2)
-	call print_hex
-	ld a,"-"
-	call print_char
-	ld a,(buffer+3)
-	call print_hex
-	ld a,"-"
-	call print_char
-	ld a,(buffer+0)
-	call print_hex
-	ld a,"-"
-	call print_char
-	ld a,(buffer+1)
-	call print_hex
-	ret	
 
 ; -----------------------------------------------------------------------------
 ; I2C DS1338 read
@@ -433,7 +376,7 @@ ddc_read
 	ld b,#00
 	call check_buffer
 	
-	ld hl,str_absent	; отсутствует устройство
+	ld hl,str_error	; отсутствует устройство
 	jr z,ddc_read3
 	ld hl,str3		; завершено
 ddc_read3
@@ -484,8 +427,7 @@ ddc_print1
 ;	bit 0	= 1:END   	(Deselect device after transfer/or immediately if START = '0')
 ; #03: Command/Status Register (read):
 ; 	bit 7	= 1:BUSY	(Currently transmitting data)
-;	bit 6	= 0:INT ENC424J600
-;	bit 5-0	= Reserved
+;	bit 6-0	= Reserved
 
 spi_end
 	ld a,%00000001		; config = end
@@ -1033,9 +975,9 @@ key_enter
 info    INCLUDE "info.asm"
 
 ;str1	
-;	db 23,0,0,17,#47,"ReVerSE-U16 DevBoard",17,7,13,13
+;	db 23,0,0,17,#47,"DivGMX Ultimate",17,7,13,13
 ;	db "FPGA SoftCore - TSConf",13
-;	db "(build 20160830) By MVV",13,13
+;	db "(build 20161231) By MVV",13,13
 
 	db "Loading roms/zxevo.rom...",0
 str8
@@ -1056,10 +998,10 @@ str2
 str6
 	db 23,0,22,"<>:Select Item   ENTER:Save&Exit"
 	db "^",127,  ":Change Values   ESC:Abort   ",0
-str_absent
+str_error
 	db 17,2," Error",17,7,13,0
-str7
-	db 13,13,"MAC address ",0
+;str7
+;	db 13,13,"MAC address ",0
 
 
 ; Fri,05.09.2014 23:53:29
@@ -1091,19 +1033,4 @@ font
 
 	savebin "loader.bin",startprog, 8192
 	
-	
-;out
-	; db "      1Hz",0," 4.096kHz",0," 8.192kHz",0,"32.768kHz",0,"        0",0,"        1",0
-
-	; db "Square-Wave Output:  [32.768kHz]"	; 1Hz, 4.096kHz, 8.192kHz, 32.768kHz, 0, 1
-	; db "      1Hz"," 4.096kHz"," 8.192kHz","32.768kHz", "        0", "        1"
-	; db "NV RAM:"
-	; db "08: [00 00 00 00 00 00 00 00]"
-	; db "10: [00 00 00 00 00 00 00 00]"
-	; db "18: [00 00 00 00 00 00 00 00]"
-	; db "20: [00 00 00 00 00 00 00 00]"
-	; db "28: [00 00 00 00 00 00 00 00]"
-	; db "30: [00 00 00 00 00 00 00 00]"
-	; db "38: [00 00 00 00 00 00 00 00]"
-
 	display "Size of ROM is: ",/a, $

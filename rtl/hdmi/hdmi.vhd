@@ -56,13 +56,11 @@ port (
 	i_blank		: in std_logic;
 	i_audioL	: in std_logic_vector(15 downto 0);
 	i_audioR	: in std_logic_vector(15 downto 0);
-	
 	o_d0		: out std_logic_vector(3 downto 0);
 	o_d1		: out std_logic_vector(3 downto 0);
 	o_d2		: out std_logic_vector(3 downto 0);
 	o_data		: out std_logic);
 end component;
-
 
 	signal red		: std_logic_vector(9 downto 0);
 	signal green		: std_logic_vector(9 downto 0);

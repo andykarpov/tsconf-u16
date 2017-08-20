@@ -1,30 +1,12 @@
--------------------------------------------------------------------[30.08.2016]
--- u16-TSConf (build 20160830) By MVV <mvvproject@gmail.com>
--- DEVBOARD ReVerSE-U16 rev.C (EP4CE22E22C8) By MVV
+-------------------------------------------------------------------[14.08.2017]
+-- TSConf (build 20170814)
+-- DEVBOARD Reverse-U16
 -------------------------------------------------------------------------------
--- 27.07.2014	первая версия
--- 31.07.2014	добавлен транслятор PS/2, HDMI
--- 03.08.2014	добавлен Delta-Sigma DAC, I2C
--- 11.08.2014	добавлен enc424j600
--- 24.08.2014	добавлена поддержка IDE Video DAC (zports.v, video_out.v)
--- 07.09.2014	добавлен порт #0001=key_scan, изменения в keyboard.vhd
--- 09.09.2014	исправлен вывод палитры в (lut.vhd)
--- 13.09.2014	дрожание мультиколора на tv80s, заменил на t80s
--- 19.10.2014	инвентирован CLK в модулях video_tmbuf, video_sfile и добавлены регистры на выходе
--- 02.11.2014	замена t80s, исправления в zint.v, zports.v, delta-sigma
--- 22.11.2014	spiflash m25p16/w25q64fv
--- 24.03.2015	в загрузчике добавлена загрузка ROM с SD Card
--- 10.04.2015	исправление в zint.v
--- 06.08.2015	добавлен ym2413 (порт #xx7C/#xx7D)
--- 10.08.2015	не используется сигнал EN при загрузке данных в порта ym2413
--- 12.09.2015	TurboSound 2x ym2149
--- 30.08.2016	HDMI 2Ch 48kHz Audio, Port #nn04 USB HID Keyboard report (nn=0-6)
-
--- https://github.com/mvvproject/ReVerSE-U16/tree/master/u16_tsconf
--- http://tslabs.info/forum/viewtopic.php?f=31&t=401
--- http://zx-pk.ru/showthread.php?t=23528
-
--- Copyright (c) 2014-2015 MVV, TS-Labs, dsp, waybester, palsw
+-- https://github.com/mvvproject/DivGMX
+-- http://forum.tslabs.info/viewtopic.php?f=6&t=691
+-- https://github.com/andykarpov/tsconf-u16
+--
+-- Copyright (c) 2014-2016 MVV, TSL, dsp, waybester, palsw
 --
 -- All rights reserved
 --
@@ -58,6 +40,12 @@
 -- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 -- POSSIBILITY OF SUCH DAMAGE.
 
+
+-- build 20161225	SAA1099
+-- build 20161231	K-Mouse Turbo
+-- build 20170814	backport to Reverse-U16 A/C
+
+
 library IEEE; 
 use IEEE.std_logic_1164.all; 
 use IEEE.std_logic_arith.all;
@@ -68,61 +56,52 @@ entity tsconf is
 port (
 	-- Clock (50MHz)
 	CLK_50MHZ		: in std_logic;
-	-- SDRAM (32MB 16x16bit)
-	SDRAM_DQ		: inout std_logic_vector(15 downto 0);
+
+	-- HDMI
+	TMDS			: out std_logic_vector(7 downto 0);
+	
+	-- USB Host (VNC2-32)
+	USB_NRESET              : in std_logic;
+	USB_IO1			: in std_logic;
+	USB_TX			: in std_logic;
+--	USB_RX			: out std_logic;
+	
+	-- SPI (W25Q64/SD)
+	DATA0			: in std_logic;
+	ASDO			: out std_logic;
+	DCLK			: out std_logic;
+	NCSO			: out std_logic;
+	
+	-- I2C (HDMI/RTC)
+	I2C_SCL			: inout std_logic;
+	I2C_SDA			: inout std_logic;
+	
+	-- SD
+--	SD_NDET			: in std_logic;
+	SD_NCS			: out std_logic;
+        SD_SO                   : in std_logic;
+        SD_SI                   : out std_logic;
+        SD_CLK                  : out std_logic;
+	
+	-- SDRAM (32M8)
+	SDRAM_DQ			: inout std_logic_vector(15 downto 0);
 	SDRAM_A			: out std_logic_vector(12 downto 0);
-	SDRAM_BA		: out std_logic_vector(1 downto 0);
-	SDRAM_CLK		: out std_logic;
+	SDRAM_BA			: out std_logic_vector(1 downto 0);
 	SDRAM_DQML		: out std_logic;
 	SDRAM_DQMH		: out std_logic;
+	SDRAM_CLK		: out std_logic;
 	SDRAM_NWE		: out std_logic;
 	SDRAM_NCAS		: out std_logic;
 	SDRAM_NRAS		: out std_logic;
-	-- RTC (DS1338Z-33+)
---	RTC_SQW		: in std_logic;
-	-- I2C 
-	I2C_SCL			: inout std_logic;
-	I2C_SDA			: inout std_logic;
-	-- RTC (DS1338Z-33+)
---	RTC_SQW			: in std_logic;
-	-- SPI FLASH (M25P16)
-	DATA0			: in std_logic;
-	NCSO			: out std_logic;
-	DCLK			: out std_logic;
-	ASDO			: out std_logic;
-	-- Ethernet (ENC424J600)
-	ETH_SO			: in std_logic;
-	ETH_NINT		: in std_logic;
-	ETH_NCS			: out std_logic;
-	-- HDMI
-	TMDS			: out std_logic_vector(7 downto 0);
---	HDMI_CEC		: inout std_logic;
---	HDMI_NDET		: in std_logic;
-	-- USB Host (VNC2-32)
-	USB_NRESET		: in std_logic;
-	USB_TX			: in std_logic;
---	USB_RX			: out std_logic;
-	USB_IO1			: in std_logic;
---	USB_IO3			: in std_logic;
---	USB_CLK			: out std_logic;
---	USB_NCS			: inout std_logic;
---	USB_SI			: inout std_logic;
---	USB_SO			: in std_logic;
-	-- uBUS+
---	AP			: out std_logic;
---	AN			: out std_logic;
---	BP			: in std_logic;
---	BN			: in std_logic;
---	CP			: in std_logic;
---	CN			: in std_logic;
-	DP			: out std_logic;
-	DN			: out std_logic;
-	-- SD/MMC Card
---	SD_NDET			: in std_logic;
-	SD_SO			: in std_logic;
-	SD_SI			: out std_logic;
-	SD_CLK			: out std_logic;
-	SD_NCS			: out std_logic);
+
+        -- Ethernet (ENC424J600)
+        ETH_SO                  : in std_logic;
+        ETH_NINT                : in std_logic;
+        ETH_NCS                 : out std_logic;
+
+	-- Audio
+	OUT_L			: out std_logic;
+	OUT_R			: out std_logic);
 end tsconf;
 
 architecture rtl of tsconf is
@@ -130,6 +109,7 @@ architecture rtl of tsconf is
 signal clk_84mhz		: std_logic;
 signal clk_28mhz		: std_logic;
 signal clk_ssg			: std_logic;
+signal clk_saa			: std_logic;
 -- CPU0
 signal cpu_a_bus		: std_logic_vector(15 downto 0);
 signal cpu_do_bus		: std_logic_vector(7 downto 0);
@@ -186,9 +166,9 @@ signal locked			: std_logic;
 signal loader			: std_logic := '1';
 signal dos			: std_logic := '1';
 --signal xtpage_0     	 	: std_logic_vector(7 downto 0);
--- PS/2 Keyboard
+-- Keyboard
 signal kb_do_bus		: std_logic_vector(4 downto 0);
-signal kb_fn_bus			: std_logic_vector(4 downto 0);
+signal kb_fn_bus		: std_logic_vector(4 downto 0);
 signal kb_joy_bus		: std_logic_vector(4 downto 0);
 signal key_scancode  		: std_logic_vector(7 downto 0);
 signal kb_report		: std_logic_vector(55 downto 0);
@@ -373,15 +353,15 @@ signal dma_spi_din 		: std_logic_vector(7 downto 0);
 signal cpu_spi_req		: std_logic;
 signal cpu_spi_din		: std_logic_vector(7 downto 0);
 signal spi_dout			: std_logic_vector(7 downto 0);
--- Keys
-signal key_f			: std_logic_vector(4 downto 0);
-signal key			: std_logic_vector(4 downto 0) := "00000";
--- SPI
 signal spi_wr			: std_logic;
 signal spi_do_bus		: std_logic_vector(7 downto 0);
 signal spi_busy			: std_logic;
 signal spi_cs_n			: std_logic;
-signal spi_miso			: std_logic;
+signal spi_miso                 : std_logic;
+
+-- Keys
+signal key_f			: std_logic_vector(4 downto 0);
+signal key			: std_logic_vector(4 downto 0) := "00000";
 -- HDMI
 signal clk_hdmi			: std_logic;
 signal csync_ts			: std_logic;
@@ -390,10 +370,18 @@ signal hdmi_d1_sig		: std_logic;
 signal i2c_do_bus		: std_logic_vector(7 downto 0);
 signal i2c_wr			: std_logic;
 -- Mouse
-signal ms_x			: std_logic_vector(7 downto 0);
-signal ms_y			: std_logic_vector(7 downto 0);
-signal ms_z			: std_logic_vector(7 downto 0);
-signal ms_b			: std_logic_vector(7 downto 0);
+signal ms0_x			: std_logic_vector(7 downto 0);
+signal ms0_y			: std_logic_vector(7 downto 0);
+signal ms0_z			: std_logic_vector(7 downto 0);
+signal ms0_b			: std_logic_vector(7 downto 0);
+signal ms1_x			: std_logic_vector(7 downto 0);
+signal ms1_y			: std_logic_vector(7 downto 0);
+signal ms1_z			: std_logic_vector(7 downto 0);
+signal ms1_b			: std_logic_vector(7 downto 0);
+-- SAA1099
+signal saa_wr_n			: std_logic;
+signal saa_out_l		: std_logic_vector(7 downto 0);
+signal saa_out_r		: std_logic_vector(7 downto 0);
 
 -------------------------------------------------------------------------------
 -- COMPONENTS TS Lab
@@ -852,6 +840,19 @@ port (
 	int_n			: out std_logic);
 end component;
 
+component saa1099
+port (
+	clk_sys		: in std_logic;
+	ce		: in std_logic;		--8 MHz
+	rst_n		: in std_logic;
+	cs_n		: in std_logic;
+	a0		: in std_logic;		--0=data, 1=address
+	wr_n		: in std_logic;
+	din		: in std_logic_vector(7 downto 0);
+	out_l		: out std_logic_vector(7 downto 0);
+	out_r		: out std_logic_vector(7 downto 0));
+end component;
+
 -------------------------------------------------------------------------------
 
 begin
@@ -864,7 +865,8 @@ port map (
 	locked			=> locked,
 	c0			=> clk_84mhz,
 	c1			=> clk_28mhz,
-	c2			=> clk_hdmi);
+	c2			=> clk_hdmi,
+	c3			=> clk_saa);
 
 TS01: clock
 port map (
@@ -1398,11 +1400,9 @@ port map (
 	BA1			=> SDRAM_BA(1),
 	BA0			=> SDRAM_BA(0),
 	MA			=> SDRAM_A,
-	DQ			=> SDRAM_DQ(15 downto 0),
+	DQ			=> SDRAM_DQ,
 	DQML     		=> SDRAM_DQML,
-	DQMH     		=> SDRAM_DQMH,
-	dram_stb 		=> open,
-	TST 			=> open);
+	DQMH			=> SDRAM_DQMH);
 	
 -- USB HID
 SE5: entity work.deserializer
@@ -1414,10 +1414,14 @@ port map(
 	I_RX			=> USB_TX,
 	I_NEWFRAME		=> USB_IO1,
 	I_ADDR			=> cpu_a_bus(15 downto 8),
-	O_MOUSE_X		=> ms_x,
-	O_MOUSE_Y		=> ms_y,
-	O_MOUSE_Z		=> ms_z,
-	O_MOUSE_BUTTONS		=> ms_b,
+	O_MOUSE0_X		=> ms0_x,
+	O_MOUSE0_Y		=> ms0_y,
+	O_MOUSE0_Z		=> ms0_z,
+	O_MOUSE0_BUTTONS	=> ms0_b,
+	O_MOUSE1_X		=> ms1_x,
+	O_MOUSE1_Y		=> ms1_y,
+	O_MOUSE1_Z		=> ms1_z,
+	O_MOUSE1_BUTTONS	=> ms1_b,
 	O_KEYBOARD_REPORT	=> kb_report,
 	O_KEYBOARD_SCAN		=> kb_do_bus,
 	O_KEYBOARD_SCANCODE	=> key_scancode,
@@ -1500,7 +1504,7 @@ port map (
 	O_SCLK			=> DCLK,
 	O_MOSI			=> ASDO,
 	I_MISO			=> spi_miso);
-	
+
 -- Delta-Sigma
 U19: entity work.dac
 generic map (
@@ -1509,7 +1513,7 @@ port map (
 	I_CLK  			=> clk_84mhz,
 	I_RESET			=> areset,
 	I_DATA			=> sound_left,
-	O_DAC			=> DP);
+	O_DAC			=> OUT_L);
 
 -- Delta-Sigma
 U20: entity work.dac
@@ -1519,7 +1523,7 @@ port map (
 	I_CLK  			=> clk_84mhz,
 	I_RESET 		=> areset,
 	I_DATA			=> sound_right,
-	O_DAC   		=> DN);
+	O_DAC   		=> OUT_R);
 
 -- HDMI
 inst_dvid: entity work.hdmi
@@ -1554,6 +1558,21 @@ port map (
 	IO_I2C_SCL		=> I2C_SCL,
 	IO_I2C_SDA		=> I2C_SDA);
 	
+U21: saa1099
+port map(
+	clk_sys			=> clk_saa,
+	ce			=> '1',			--8 MHz
+	rst_n			=> not reset,
+	cs_n			=> '0',
+	a0			=> cpu_a_bus(8),	--0=data, 1=address
+	wr_n			=> saa_wr_n,
+	din			=> cpu_do_bus,
+	out_l			=> saa_out_l,
+	out_r			=> saa_out_r);
+	
+
+
+
 -------------------------------------------------------------------------------
 -- Global
 -------------------------------------------------------------------------------
@@ -1580,7 +1599,7 @@ cpu_di_bus <=	rom_do_bus when (loader = '1' and cpu_mreq_n = '0' and cpu_rd_n = 
 		sdr_do_bus when (cpu_mreq_n = '0' and cpu_rd_n = '0') else 	-- SDRAM
 		im2vect	when intack = '1' else
 		spi_do_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus( 7 downto 0) = X"02") else
-		spi_busy & ETH_NINT & "111111" when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus( 7 downto 0) = X"03") else
+		spi_busy & "1111111" when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus( 7 downto 0) = X"03") else
 		mc146818a_do_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and port_bff7 = '1' and port_eff7_reg(7) = '1') else		-- MC146818A
 		ssg0_do_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"FFFD" and ssg_sel = '0') else	-- TurboSound
 		ssg1_do_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"FFFD" and ssg_sel = '1') else
@@ -1593,16 +1612,19 @@ cpu_di_bus <=	rom_do_bus when (loader = '1' and cpu_mreq_n = '0' and cpu_rd_n = 
 		kb_report(47 downto 40) when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"0504") else
 		kb_report(55 downto 48) when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"0604") else
 		i2c_do_bus when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus( 7 downto 5) = "100" and cpu_a_bus(3 downto 0) = "1100") else -- RTC
-		ms_z(3 downto 0) & '1' & not ms_b(2 downto 0) when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"FADF") else
-		ms_x when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"FBDF") else
-		not ms_y when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = X"FFDF") else
+		ms0_z(3 downto 0) & '1' & not ms0_b(2) & not ms0_b(0) & not ms0_b(1) when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = x"FADF")  else	-- Mouse0
+		ms0_x when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = x"FBDF")  else
+		not ms0_y when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus = x"FFDF") else
+		ms1_z(3 downto 0) & '1' & not ms1_b(2) & not ms1_b(0) & not ms1_b(1) when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus(15) = '0' and cpu_a_bus(10) = '0' and cpu_a_bus(8) = '0' and cpu_a_bus(7 downto 0) = X"DF") else	-- Mouse1
+		ms1_x when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus(15) = '0' and cpu_a_bus(10) = '0' and cpu_a_bus(8) = '1' and cpu_a_bus(7 downto 0) = X"DF") else
+		not ms1_y when (cpu_iorq_n = '0' and cpu_rd_n = '0' and cpu_a_bus(15) = '0' and cpu_a_bus(10) = '1' and cpu_a_bus(8) = '1' and cpu_a_bus(7 downto 0) = X"DF") else
 		dout_ports when ena_ports = '1' else
 		"11111111";
 
 process (areset, clk_28mhz, cpu_a_bus, cpu_mreq_n, cpu_wr_n, cpu_do_bus, port_xx01_reg)
 begin
 	if areset = '1' then
-		port_xx01_reg <= "00000000";	-- bit2 = (0:Loader ON, 1:Loader OFF); bit0 = (0:ETH, 1:FLASH)
+		port_xx01_reg <= "00000000";	-- bit2 = (0:Loader ON, 1:Loader OFF); bit0 = (0:SD, 1:FLASH)
 		loader <= '1';
 	elsif clk_28mhz'event and clk_28mhz = '1' then
 		if cpu_iorq_n = '0' and cpu_wr_n = '0' and cpu_a_bus(7 downto 0) = "00000001" then port_xx01_reg <= cpu_do_bus; end if;
@@ -1640,19 +1662,23 @@ mc146818a_wr <= '1' when (port_bff7 = '1' and cpu_wr_n = '0') else '0';
 --mc146818a_rd <= '1' when (port_bff7 = '1' and cpu_rd_n = '0') else '0';
 port_bff7 <= '1' when (cpu_iorq_n = '0' and cpu_a_bus = X"BFF7" and cpu_m1_n = '1' and port_eff7_reg(7) = '1') else '0';
 
--- SPI ENC424J600/M25P16
+-- SPI FLASH/SD Card
 spi_wr <= '1' when (cpu_iorq_n = '0' and cpu_wr_n = '0' and cpu_a_bus(7 downto 1) = "0000001") else '0';
+
 NCSO <= spi_cs_n when port_xx01_reg(0) = '0' else '1';
 spi_miso <= DATA0 when port_xx01_reg(0) = '0' else ETH_SO;
-ETH_NCS <= '1' when port_xx01_reg(0) = '0' else spi_cs_n;
 
 -- I2C
 i2c_wr <= '1' when (cpu_a_bus(7 downto 5) = "100" and cpu_a_bus(3 downto 0) = "1100" and cpu_wr_n = '0' and cpu_iorq_n = '0') else '0';	-- Port xx8C/xx9C[xxxxxxxx_100n1100]
 
 -- Audio
 beeper <= (others => port_xxfe_reg(4));
-sound_left  <= ("000" & beeper & "00000") + ("000" & ssg0_a & "00000") + ("000" & ssg0_b & "00000") + ("000" & ssg1_a & "00000") + ("000" & ssg1_b & "00000") + ("000" & covox_a & "00000") + ("000" & covox_b & "00000");
-sound_right <= ("000" & beeper & "00000") + ("000" & ssg0_c & "00000") + ("000" & ssg0_b & "00000") + ("000" & ssg1_c & "00000") + ("000" & ssg1_b & "00000") + ("000" & covox_c & "00000") + ("000" & covox_d & "00000");
+sound_left  <= (others => '0') when loader='1' else ("000" & beeper & "00000") + ("000" & ssg0_a & "00000") + ("000" & ssg0_b & "00000") + ("000" & ssg1_a & "00000") + ("000" & ssg1_b & "00000") + ("000" & covox_a & "00000") + ("000" & covox_b & "00000") + ("000" & saa_out_l & "00000");
+sound_right <= (others => '0') when loader='1' else ("000" & beeper & "00000") + ("000" & ssg0_c & "00000") + ("000" & ssg0_b & "00000") + ("000" & ssg1_c & "00000") + ("000" & ssg1_b & "00000") + ("000" & covox_c & "00000") + ("000" & covox_d & "00000") + ("000" & saa_out_r & "00000");
 
+-- SAA1099
+saa_wr_n <= '0' when (cpu_iorq_n = '0' and cpu_wr_n = '0' and cpu_a_bus(7 downto 0) = "11111111") else '1';
+
+ETH_NCS <= '1'; -- disable Ethernet controller
 
 end rtl;
